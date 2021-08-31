@@ -1,16 +1,16 @@
 {
   "private": true,
-  "name": "template-for-proposals",
-  "description": "A repository template for ECMAScript proposals.",
+  "name": "proposal-evaluator-attributes",
+  "description": "Proposal for syntax to import ES modules with evaluator attributes.",
   "scripts": {
     "start": "npm run build-loose -- --watch",
     "build": "npm run build-loose -- --strict",
     "build-loose": "ecmarkup --verbose spec.emu index.html"
   },
-  "homepage": "https://github.com/tc39/template-for-proposals#readme",
+  "homepage": "https://github.com/lucacasonato/proposal-evaluator-attributes#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/tc39/template-for-proposals.git"
+    "url": "git+https://github.com/lucacasonato/proposal-evaluator-attributes.git"
   },
   "license": "MIT",
   "devDependencies": {

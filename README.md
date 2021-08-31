@@ -1,60 +1,92 @@
-# template-for-proposals
+# Import Evaluator Attributes
 
-A repository template for ECMAScript proposals.
+## Status
 
-## Before creating a proposal
+Champion(s): _none_
 
-Please ensure the following:
-  1. You have read the [process document](https://tc39.github.io/process-document/)
-  1. You have reviewed the [existing proposals](https://github.com/tc39/proposals/)
-  1. You are aware that your proposal requires being a member of TC39, or locating a TC39 delegate to "champion" your proposal
+Author(s): Luca Casonato
 
-## Create your proposal repo
+Stage: -1
 
-Follow these steps:
-  1.  Click the green ["use this template"](https://github.com/tc39/template-for-proposals/generate) button in the repo header. (Note: Do not fork this repo in GitHub's web interface, as that will later prevent transfer into the TC39 organization)
-  1.  Go to your repo settings “Options” page, under “GitHub Pages”, and set the source to the **main branch** under the root (and click Save, if it does not autosave this setting)
-      1. check "Enforce HTTPS"
-      1. On "Options", under "Features", Ensure "Issues" is checked, and disable "Wiki", and "Projects" (unless you intend to use Projects)
-      1. Under "Merge button", check "automatically delete head branches"
-<!--
-  1.  Avoid merge conflicts with build process output files by running:
-      ```sh
-      git config --local --add merge.output.driver true
-      git config --local --add merge.output.driver true
-      ```
-  1.  Add a post-rewrite git hook to auto-rebuild the output on every commit:
-      ```sh
-      cp hooks/post-rewrite .git/hooks/post-rewrite
-      chmod +x .git/hooks/post-rewrite
-      ```
--->
-  3.  ["How to write a good explainer"][explainer] explains how to make a good first impression.
+## Motivation
 
-      > Each TC39 proposal should have a `README.md` file which explains the purpose
-      > of the proposal and its shape at a high level.
-      >
-      > ...
-      >
-      > The rest of this page can be used as a template ...
+The WebAssembly ECMAScript module integration proposal [proposes][wasm-esm] deep
+integration of WebAssembly into the ESM system. It automatically compiles,
+instantiates, and binds WASM executables, allowing for easy calling between
+WebAssembly and ECMAScript.
 
-      Your explainer can point readers to the `index.html` generated from `spec.emu`
-      via markdown like
+In [an issue][high-order-integration], Guy Bedford proposed to change the ESM
+integration to only compile WASM modules on import (with the only export being a
+`default` `WebAssembly.Module`). This has the benefits of being able to manually
+instantiate a WebAssembly instance, which gives the developer much more control
+over the sandbox the WASM executes in.
 
-      ```markdown
-      You can browse the [ecmarkup output](https://ACCOUNT.github.io/PROJECT/)
-      or browse the [source](https://github.com/ACCOUNT/PROJECT/blob/HEAD/spec.emu).
-      ```
+This discussion led to the conclusion that we probably want both:
 
-      where *ACCOUNT* and *PROJECT* are the first two path elements in your project's Github URL.
-      For example, for github.com/**tc39**/**template-for-proposals**, *ACCOUNT* is "tc39"
-      and *PROJECT* is "template-for-proposals".
+- import a wasm module that gets instantiated by the ESM loader (as
+  ESM-integration is written today) and
+- import a wasm module as a WebAssembly.Module object.
 
+This means that two imports of the same asset should evaluate differently based
+on some hint. This proposal proposes this hint to be in the form of ECMAScript
+syntax.
 
-## Maintain your proposal repo
+This requires that the ES import syntax allow for extra attributes to be
+provided on an import that change how the referenced asset should be
+interpreted: import evaluator attributes.
 
-  1. Make your changes to `spec.emu` (ecmarkup uses HTML syntax, but is not HTML, so I strongly suggest not naming it ".html")
-  1. Any commit that makes meaningful changes to the spec, should run `npm run build` and commit the resulting output.
-  1. Whenever you update `ecmarkup`, run `npm run build` and commit any changes that come from that dependency.
+[wasm-esm]: https://github.com/WebAssembly/esm-integration/tree/master/proposals/esm-integration
+[high-order-integration]: https://github.com/WebAssembly/esm-integration/issues/44
 
-  [explainer]: https://github.com/tc39/how-we-work/blob/HEAD/explainer.md
+## Proposed syntax
+
+> I don't care about the exact syntax. This is the minimal viable syntax that
+> solves the issue and can be trivially expanded to usecases outside of WASM
+> modules.
+
+### Import statements
+
+Import a WebAssembly binary as a compiled module:
+
+```js
+import mod from "./foo.wasm" as "wasm-module";
+mod instanceof WebAssembly.Module; // true
+```
+
+### Re-export statements
+
+```js
+export { default as wasmModule } from "./foo.wasm" as "wasm-module";
+```
+
+### Dynamic import()
+
+```js
+const { default: mod } = await import("./foo.wasm", { as: "wasm-module" });
+```
+
+## Semantics
+
+This proposal proposes that for each different combination of module specifier
+and evaluator attributes, a different copy of the module is stored in the graph.
+Modules are **cloned**. In this case, the attributes would have to be part of
+the cache key. These semantics would run counter to the intuition that there is
+just one copy of a module.
+
+Alternative proposals include:
+
+- **Race** and use the attribute that was requested by the first import. This
+  seems broken--the second usage is ignored.
+- **Reject** the module graph and don't load if attributes differ. This seems
+  bad for composition--using two unrelated packages together could break, if
+  they load the same module with disagreeing attributes.
+
+Both of these are less versatile than the proposed "clone" behaviour.
+
+## Q&A
+
+**Q**: How is this different from import assertions?
+
+**A**: Import assertions dont influence how an imported asset is evaluated. This
+does. Also see
+https://github.com/tc39/proposal-import-assertions#follow-up-proposal-evaluator-attributes.
