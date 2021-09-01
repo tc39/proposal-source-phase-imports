@@ -44,26 +44,103 @@ interpreted: import evaluator attributes.
 > solves the issue and can be trivially expanded to usecases outside of WASM
 > modules.
 
+The syntax proposed here is to add a field for an optional string literal to all
+imports. This string literal can will represent instructions for the module
+loader, on how to evaluate a given specifier.
+
 ### Import statements
 
+```js
+import x from "<specifier>" as "<evaluator-attribute>";
+```
+
+Here the evaluator attribute is added to the end of the ImportStatement,
+prefixed by the "as" keyword. If combined with an import assertion, the
+assertion must always come after the evaluator attribute:
+
+```js
+import x from "<specifier>" as "<evaluator-attribute>" asserts {};
+```
+
+It is also possible to specify an evaluator attribute if the import is not
+bound:
+
+```js
+import "<specifier>" as "<evaluator-attribute>";
+```
+
+### Re-export statements
+
+```js
+export { default as x } from "<specifier>" as "<evaluator-attribute>";
+```
+
+For re-export statements, the syntax is essentially identical to import
+statements. Import assertions must also appear _after_ evaluator attributes.
+
+### Dynamic import()
+
+```js
+const x = await import("<specifier>", { as: "<evaluator-attribute>" });
+```
+
+For dynamic imports, evaluator attributes are specified in the same second
+attribute options bag that import assertions are specified in. The ordering of
+`asserts` vs `as` does not matter here.
+
+## Integration with other specs and environments
+
+> This section of the proposal is not aimed at TC39. It is background info for
+> how this can integrate into other specifications, such as HTML or
+> webassembly-esm.
+
+### HTML spec
+
+On the web platform, there are other APIs that have the ability to load ES
+modules. These also need to be able to specify evaluator attributes. Here are
+some examples of how this could look.
+
+#### Web Workers
+
+```js
+const worker = new Worker("<specifier>", {
+  type: "module",
+  as: "<evaluator-attribute>",
+});
+```
+
+#### `<script>` tags
+
+```html
+<script href="<specifier>" type="module" as="<evaluator-attribute>" ></script>
+```
+
+### WebAssembly
+
+WebAssembly is working to integrate with the ESM module graph in the
+`webassembly-esm` integration proposal. There are multiple ways in which this
+proposal interacts with that:
+
 Import a WebAssembly binary as a compiled module:
+
+##### `WebAssembly.Module` imports
 
 ```js
 import mod from "./foo.wasm" as "wasm-module";
 mod instanceof WebAssembly.Module; // true
 ```
 
-### Re-export statements
+This is explained in the "Motivation" section above. A `"wasm-module"` evaluator
+attribute would be added that changes the behaviour of importing a .wasm file:
+it would now just be compiled, but not instantiated or linked.
 
-```js
-export { default as wasmModule } from "./foo.wasm" as "wasm-module";
-```
+#### Imports from WebAssembly
 
-### Dynamic import()
-
-```js
-const { default: mod } = await import("./foo.wasm", { as: "wasm-module" });
-```
+With this wasm-esm proposal, WebAssembly gets the ability to directly import
+ESM. This means that it also needs to represent evaluator attributes in its
+imports. To make this work, a new custom section (named `evaluatorattributes`)
+would be addedm that will annotate each imported module with evaluator
+attributes.
 
 ## Semantics
 
