@@ -2,7 +2,7 @@
 
 ## Status
 
-Champion(s): _none_
+Champion(s): Guy Bedford
 
 Author(s): Luca Casonato
 
@@ -15,40 +15,35 @@ integration of WebAssembly into the ESM system. It automatically compiles,
 instantiates, and binds WASM executables, allowing for easy calling between
 WebAssembly and ECMAScript.
 
-In [an issue][high-order-integration], Guy Bedford proposed to change the ESM
-integration to only compile WASM modules on import (with the only export being a
-`default` `WebAssembly.Module`). This has the benefits of being able to manually
-instantiate a WebAssembly instance, which gives the developer much more control
-over the sandbox the WASM executes in.
+The Web Assembly [Module Linking Proposal][] extends the requirements for the
+ESM host integration to support a secondary type of module import - a
+"module import" as distinct from an "instance import". Where an instance import
+would return a fully linked and evaluated `WebAssembly.Instance`, a module import
+would return the compiled but unlinked and unexecuted `WebAssembly.Module` object.
 
-This discussion led to the conclusion that we probably want both:
+In the module linking proposal both types of object are importable and can be
+associated with the same import specifier. In essence, the module type import
+provides the module constructor to create custom instances as having separate
+linear memory and linked bindings.
 
-- import a wasm module that gets instantiated by the ESM loader (as
-  ESM-integration is written today) and
-- import a wasm module as a WebAssembly.Module object.
+This higher level control over the Wasm execution sandbox ends up being an
+important practical requirement in many Web Assembly workflows.
 
-This means that two imports of the same asset should evaluate differently based
-on some hint. This proposal proposes this hint to be in the form of ECMAScript
-syntax.
+The requirement is thus that two imports of the same asset may return a distinct
+ES module result based on some import hint.
 
-This requires that the ES import syntax allow for extra attributes to be
-provided on an import that change how the referenced asset should be
-interpreted: import evaluator attributes.
+This proposal proposes this hint to be in the form of ECMAScript syntax that
+enables the module import syntax allow for extra attributes to be provided to
+an import that changes how the referenced asset should be interpreted:
+import evaluator attributes.
 
+[Module Linking Proposal]: https://github.com/WebAssembly/module-linking/blob/master/proposals/module-linking/Explainer.md
 [wasm-esm]: https://github.com/WebAssembly/esm-integration/tree/master/proposals/esm-integration
-[high-order-integration]: https://github.com/WebAssembly/esm-integration/issues/44
 
-## Proposed syntax
+## Proposal
 
-> I don't care about the exact syntax. This is the minimal viable syntax that
-> solves the issue and can be trivially expanded to usecases outside of WASM
-> modules.
-
-The syntax proposed here is to add a field for an optional string literal to all
-imports. This string literal can will represent instructions for the module
-loader, on how to evaluate a given specifier.
-
-### Import statements
+The proposal is to permit an optional string literal attribute to be associated
+with any import:
 
 ```js
 import x from "<specifier>" as "<evaluator-attribute>";
@@ -89,10 +84,6 @@ attribute options bag that import assertions are specified in. The ordering of
 `asserts` vs `as` does not matter here.
 
 ## Integration with other specs and environments
-
-> This section of the proposal is not aimed at TC39. It is background info for
-> how this can integrate into other specifications, such as HTML or
-> webassembly-esm.
 
 ### HTML spec
 
