@@ -11,13 +11,12 @@ Stage: 0
 ## Motivation
 
 The WebAssembly [ECMAScript module integration proposal][wasm-esm] proposes direct
-integration of WebAssembly into the ES module system. It automatically compiles,
-instantiates, and binds WASM executables, and supporting imports in turn and allowing
-for declarative linking between WebAssembly and ECMAScript module graphs.
+integration of WebAssembly into the ES module system based on sharing JS and Wasm
+_module instances_ resolved by JS and Wasm imports.
 
 The Web Assembly [Module Linking Proposal][] extends the requirements for the
 ESM host integration to support a secondary type of module import - a
-"module import" as distinct from an "instance import". Where an instance import
+_module type import_ as distinct from an _instance import_. Where an instance import
 would return a fully linked and evaluated `WebAssembly.Instance`, a module import
 would return the compiled but unlinked and unexecuted `WebAssembly.Module` object.
 
@@ -92,9 +91,9 @@ Import a WebAssembly binary as a compiled module:
 
 ##### `WebAssembly.Module` imports
 
-As explained in the "Motivation" section above, supporting a `"wasm-module"` evaluator
-attribute is a primary motivation for this would, in order to change the behaviour of
-importing a direct compiled but unliked [Wasm module object](https://webassembly.github.io/spec/js-api/index.html#modules):
+As explained in the motivation, supporting a `"wasm-module"` evaluator
+attribute is a primary motivation for this specificatoin in order to change the behaviour of
+importing a direct compiled but unlinked [Wasm module object](https://webassembly.github.io/spec/js-api/index.html#modules):
 
 ```js
 import mod from "./foo.wasm" as "wasm-module";
@@ -104,7 +103,7 @@ mod instanceof WebAssembly.Module; // true
 #### Imports from WebAssembly
 
 Web Assembly would have the ability to reflect evaluator attributes in its
-imports if desired, as the [Module Linking proposal currently seeks to specify](https://github.com/WebAssembly/module-linking/blob/main/proposals/module-linking/Binary.md#import-section-updates).
+imports if desired, as the [Module Linking proposal currently aims to specify](https://github.com/WebAssembly/module-linking/blob/main/proposals/module-linking/Binary.md#import-section-updates).
 
 ### HTML spec
 
@@ -131,7 +130,7 @@ const worker = new Worker("<specifier>", {
 
 Semantically this proposal involves a relaxation of the `HostResolveImportedModule` idempotency requirement.
 
-The proposed approach would be a "clone" behaviour, where imports to the same module of different
+The proposed approach would be a _clone_ behaviour, where imports to the same module of different
 evaluator attributes result in separate instances. These semantics do run counter to the intuition
 that there is just one copy of a module.
 
@@ -152,7 +151,7 @@ Alternative proposals include:
   bad for composition--using two unrelated packages together could break, if
   they load the same module with disagreeing attributes.
 
-Both of these alternatives seem less versatile than the proposed "clone" behaviour above.
+Both of these alternatives seem less versatile than the proposed _clone_ behaviour above.
 
 ## Q&A
 
