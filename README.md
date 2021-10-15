@@ -166,11 +166,12 @@ https://github.com/tc39/proposal-import-assertions#follow-up-proposal-evaluator-
 
 **A**: One way of thinking about evaluator attributes is that they vary the representation
 of a module being imported. If JS itself ever wanted to reflect module imports at a higher
-level of linkage that is something that might be enabled by this work. In addition assets that
-have different representations in JS might benefit from evaluator attributes that vary the
-way in which the module is reflected.
+level of abstraction that is something that might be enabled by this work, for example being
+able to import an unexecuted JS module object that could be passed around. Simiarly, any asset
+imports that might have different representations in JS would benefit from evaluator attributes
+that vary the way in which the module is reflected through importing.
 
 **Q**: Would this proposal enable the importing of other languages directly as modules?
 
-**A**: While hosts may define what evaluator attributes they see fit, expanding the evaluation of
+**A**: While hosts may define evaluator attributes they see fit, expanding the evaluation of
 arbitrary language syntax to the web is not seen as a motivating use case for this proposal.
