@@ -35,7 +35,7 @@ asset may return a distinct ES module result based on some import hint.
 This proposal, using the principle of equal capability, proposes a similar hint
 to be in the form of ECMAScript syntax that enables the module import syntax
 to provide extra attributes along with a given import as evaluator attributes
-with the primary use case in mind of permitting these module-type imports for Wasm.
+with the primary use case in mind of permitting these module type imports for Wasm.
 
 [Module Linking Proposal]: https://github.com/WebAssembly/module-linking/blob/master/proposals/module-linking/Explainer.md
 [wasm-esm]: https://github.com/WebAssembly/esm-integration/tree/master/proposals/esm-integration
