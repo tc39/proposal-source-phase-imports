@@ -117,7 +117,8 @@ requires a `script-src: unsafe-eval` CSP attribute. This makes WASM a potential 
 
 With this proposal, the WASM module would be known statically, so would not have to be considered as
 dynamic code generation. This would allow the web platform to lift this restriction for statically
-imported WASM modules, and instead just require `script-src: self` like for JS.
+imported WASM modules, and instead just require `script-src: self` like for JS. Also see
+https://github.com/WebAssembly/esm-integration/issues/56.
 
 This does not just impact platforms using CSP, but also other platforms with systems to restrict
 permissions, such as Deno.
