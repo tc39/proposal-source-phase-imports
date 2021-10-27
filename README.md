@@ -51,10 +51,10 @@ import x from "<specifier>" as "<evaluator-attribute>";
 
 Here the evaluator attribute is added to the end of the ImportStatement,
 prefixed by the "as" keyword. If combined with an import assertion, the
-assertion must always come after the evaluator attribute:
+assertion must always come _before_ the evaluator attribute:
 
 ```js
-import x from "<specifier>" as "<evaluator-attribute>" assert {};
+import x from "<specifier>" assert {} as "<evaluator-attribute>";
 ```
 
 It is also possible to specify an evaluator attribute if the import is not
@@ -71,7 +71,7 @@ export { default as x } from "<specifier>" as "<evaluator-attribute>";
 ```
 
 For re-export statements, the syntax is essentially identical to import
-statements. Import assertions must also appear _after_ evaluator attributes.
+statements. Import assertions must also appear _before_ evaluator attributes.
 
 ### Dynamic import()
 
