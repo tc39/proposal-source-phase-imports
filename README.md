@@ -91,13 +91,22 @@ Import a WebAssembly binary as a compiled module:
 
 ##### `WebAssembly.Module` imports
 
-As explained in the motivation, supporting a `"wasm-module"` evaluator
-attribute is a primary motivation for this specificatoin in order to change the behaviour of
+As explained in the motivation, supporting a `"wasm-module"` evaluator attribute is a driving use case for this specification in order to change the behaviour of
 importing a direct compiled but unlinked [Wasm module object](https://webassembly.github.io/spec/js-api/index.html#modules):
 
 ```js
-import mod from "./foo.wasm" as "wasm-module";
-mod instanceof WebAssembly.Module; // true
+import FooModule from "./foo.wasm" as "wasm-module";
+FooModule instanceof WebAssembly.Module; // true
+
+// For example, to run a WASI execution with an API like Node.js WASI:
+import { WASI } from 'wasi';
+const wasi = new WASI({ args, env, preopens });
+
+const fooInstance = await WebAssembly.instantiate(FooModule, {
+  wasi_snapshot_preview1: wasi.wasiImport
+});
+
+wasi.start(fooInstance);
 ```
 
 #### Imports from WebAssembly
