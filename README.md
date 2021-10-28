@@ -105,6 +105,26 @@ mod instanceof WebAssembly.Module; // true
 Web Assembly would have the ability to reflect evaluator attributes in its
 imports if desired, as the [Module Linking proposal currently aims to specify](https://github.com/WebAssembly/module-linking/blob/main/proposals/module-linking/Binary.md#import-section-updates).
 
+
+#### Security improvements
+
+[CSP][] is a web platform feature that allows you to limit the capabilities the platform grants to a
+given site.
+
+A common use is to disallow dynamic code generation means like `eval`. WASM compilation is
+unfortunatly completly dynamic right now (manual network fetch + compile), so WASM unconditionally
+requires a `script-src: unsafe-eval` CSP attribute. This makes WASM a potential security risk.
+
+With this proposal, the WASM module would be known statically, so would not have to be considered as
+dynamic code generation. This would allow the web platform to lift this restriction for statically
+imported WASM modules, and instead just require `script-src: self` like for JS. Also see
+https://github.com/WebAssembly/esm-integration/issues/56.
+
+This does not just impact platforms using CSP, but also other platforms with systems to restrict
+permissions, such as Deno.
+
+[CSP]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy
+
 ### HTML spec
 
 On the web platform, there are other APIs that have the ability to load ES
@@ -175,3 +195,10 @@ that vary the way in which the module is reflected through importing.
 
 **A**: While hosts may define evaluator attributes they see fit, expanding the evaluation of
 arbitrary language syntax to the web is not seen as a motivating use case for this proposal.
+
+**Q**: Why not just use `const module = await WebAssembly.compileStreaming(fetch(new URL("./module.wasm", import.meta.url)));`?
+
+**A**: There are multiple benefits: firstly if the module is statically referenced in the module
+graph, it is easier to statically analyze (by bundlers for example). Secondly when using CSP,
+`script-src: unsafe-eval` would not be needed. See the security improvements section for more
+details.
