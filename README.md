@@ -97,7 +97,7 @@ importing a direct compiled but unlinked [Wasm module object](https://webassembl
 
 ```js
 import FooModule from "./foo.wasm" as "wasm-module";
-mod instanceof WebAssembly.Module; // true
+FooModule instanceof WebAssembly.Module; // true
 
 // For example, to run a WASI execution with an API like Node.js WASI:
 import { WASI } from 'wasi';
