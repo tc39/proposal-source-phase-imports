@@ -96,8 +96,19 @@ attribute is a primary motivation for this specificatoin in order to change the 
 importing a direct compiled but unlinked [Wasm module object](https://webassembly.github.io/spec/js-api/index.html#modules):
 
 ```js
-import mod from "./foo.wasm" as "wasm-module";
+import FooModule from "./foo.wasm" as "wasm-module";
+
 mod instanceof WebAssembly.Module; // true
+
+// For example, to run a WASI execution:
+import { WASI } from 'wasi';
+const wasi = new WASI({ args, env, preopens });
+
+const instance = await WebAssembly.instantiate(FooModule, {
+  wasi_snapshot_preview1: wasi.wasiImport
+});
+
+wasi.start(instance);
 ```
 
 #### Imports from WebAssembly
