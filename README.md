@@ -1,4 +1,4 @@
-# Import Evaluator Attributes
+# Import Reflection
 
 ## Status
 
@@ -33,8 +33,8 @@ The requirement for the ESM integration would thus be that two imports of the sa
 asset may return a distinct ES module result based on some import hint.
 
 This proposal, using the principle of equal capability, proposes a similar hint
-to be in the form of ECMAScript syntax that enables the module import syntax
-to provide extra attributes along with a given import as evaluator attributes
+to be in the form of ECMAScript syntax that enables the module import syntax to
+include import reflection syntax to indicate an alternative reflective API import,
 with the primary use case in mind of permitting these module type imports for Wasm.
 
 [Module Linking Proposal]: https://github.com/WebAssembly/module-linking/blob/master/proposals/module-linking/Explainer.md
@@ -46,41 +46,41 @@ The proposal is to permit an optional string literal attribute to be associated
 with any import:
 
 ```js
-import x from "<specifier>" as "<evaluator-attribute>";
+import x from "<specifier>" as "<reflection-type>";
 ```
 
-Here the evaluator attribute is added to the end of the ImportStatement,
+Here the import reflection type is added to the end of the ImportStatement,
 prefixed by the "as" keyword. If combined with an import assertion, the
-assertion must always come _before_ the evaluator attribute:
+assertion must always come _before_ the reflection type:
 
 ```js
-import x from "<specifier>" assert {} as "<evaluator-attribute>";
+import x from "<specifier>" assert {} as "<reflection-type>";
 ```
 
-It is also possible to specify an evaluator attribute if the import is not
+It is also possible to specify an import reflection if the import is not
 bound:
 
 ```js
-import "<specifier>" as "<evaluator-attribute>";
+import "<specifier>" as "<reflection-type>";
 ```
 
 ### Re-export statements
 
 ```js
-export { default as x } from "<specifier>" as "<evaluator-attribute>";
+export { default as x } from "<specifier>" as "<reflection-type>";
 ```
 
 For re-export statements, the syntax is essentially identical to import
-statements. Import assertions must also appear _before_ evaluator attributes.
+statements.
 
 ### Dynamic import()
 
 ```js
-const x = await import("<specifier>", { as: "<evaluator-attribute>" });
+const x = await import("<specifier>", { as: "<reflection-type>" });
 ```
 
-For dynamic imports, evaluator attributes are specified in the same second
-attribute options bag that import assertions are specified in. The ordering of
+For dynamic imports, import reflection is specified in the same second attribute
+options bag that import assertions are specified in. The ordering of
 `asserts` vs `as` does not matter here.
 
 ## Integration with other specs and environments
@@ -91,7 +91,7 @@ Import a WebAssembly binary as a compiled module:
 
 ##### `WebAssembly.Module` imports
 
-As explained in the motivation, supporting a `"wasm-module"` evaluator attribute is a driving use case for this specification in order to change the behaviour of
+As explained in the motivation, supporting a `"wasm-module"` import reflection is a driving use case for this specification in order to change the behaviour of
 importing a direct compiled but unlinked [Wasm module object](https://webassembly.github.io/spec/js-api/index.html#modules):
 
 ```js
@@ -111,7 +111,7 @@ wasi.start(fooInstance);
 
 #### Imports from WebAssembly
 
-Web Assembly would have the ability to reflect evaluator attributes in its
+Web Assembly would have the ability to expose import reflection in its
 imports if desired, as the [Module Linking proposal currently aims to specify](https://github.com/WebAssembly/module-linking/blob/main/proposals/module-linking/Binary.md#import-section-updates).
 
 
@@ -137,7 +137,7 @@ permissions, such as Deno.
 ### HTML spec
 
 On the web platform, there are other APIs that have the ability to load ES
-modules. These also need to be able to specify evaluator attributes. Here are
+modules. These also need to be able to specify import reflection. Here are
 some examples of how these might look.
 
 #### Web Workers
@@ -145,14 +145,14 @@ some examples of how these might look.
 ```js
 const worker = new Worker("<specifier>", {
   type: "module",
-  as: "<evaluator-attribute>",
+  as: "<reflection-type>",
 });
 ```
 
 #### `<script>` tags
 
 ```html
-<script href="<specifier>" type="module" as="<evaluator-attribute>" ></script>
+<script href="<specifier>" type="module" as="<reflection-type>" ></script>
 ```
 
 ## Cache Key Semantics
@@ -160,17 +160,17 @@ const worker = new Worker("<specifier>", {
 Semantically this proposal involves a relaxation of the `HostResolveImportedModule` idempotency requirement.
 
 The proposed approach would be a _clone_ behaviour, where imports to the same module of different
-evaluator attributes result in separate instances. These semantics do run counter to the intuition
+reflection types result in separate keys. These semantics do run counter to the intuition
 that there is just one copy of a module.
 
 The specification would then split the `HostResolveImportedModule` hook into two components -
 module asset resolution, and module asset interpretation. The module asset resolution component
 would retain the exact same idempotency requirement, while the module asset interpretation component
-would have idempotency down to keying on the module asset and evaluator type pair.
+would have idempotency down to keying on the module asset and reflection type pair.
 
 Effectively, this splits the module cache into two separate caches - an asset cache retaining the
 current idempotency of the `HostResolveImportedModule` host hook, pointing to an opaque cached asset reference,
-and a module instance cache, keyed by this opaque asset reference and the evaluator attribute.
+and a module instance cache, keyed by this opaque asset reference and the reflection type.
 
 Alternative proposals include:
 
@@ -193,16 +193,16 @@ https://github.com/tc39/proposal-import-assertions#follow-up-proposal-evaluator-
 
 **Q**: Are there use cases for this feature other than Web Assembly imports?
 
-**A**: One way of thinking about evaluator attributes is that they vary the representation
+**A**: One way of thinking about import reflections is that they vary the representation
 of a module being imported. If JS itself ever wanted to reflect module imports at a higher
 level of abstraction that is something that might be enabled by this work, for example being
 able to import an unexecuted JS module object that could be passed around. Simiarly, any asset
-imports that might have different representations in JS would benefit from evaluator attributes
+imports that might have different representations in JS would benefit from import reflection
 that vary the way in which the module is reflected through importing.
 
 **Q**: Would this proposal enable the importing of other languages directly as modules?
 
-**A**: While hosts may define evaluator attributes they see fit, expanding the evaluation of
+**A**: While hosts may define import reflection, expanding the evaluation of
 arbitrary language syntax to the web is not seen as a motivating use case for this proposal.
 
 **Q**: Why not just use `const module = await WebAssembly.compileStreaming(fetch(new URL("./module.wasm", import.meta.url)));`?
