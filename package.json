@@ -1,16 +1,16 @@
 {
   "private": true,
-  "name": "proposal-evaluator-attributes",
-  "description": "Proposal for syntax to import ES modules with evaluator attributes.",
+  "name": "proposal-import-reflection",
+  "description": "Proposal for syntax to import ES modules with a reflection API.",
   "scripts": {
     "start": "npm run build-loose -- --watch",
     "build": "npm run build-loose -- --strict",
     "build-loose": "ecmarkup --verbose spec.emu index.html"
   },
-  "homepage": "https://github.com/lucacasonato/proposal-evaluator-attributes#readme",
+  "homepage": "https://github.com/tc39/proposal-import-reflection#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/lucacasonato/proposal-evaluator-attributes.git"
+    "url": "git+https://github.com/tc39/proposal-import-reflection.git"
   },
   "license": "MIT",
   "devDependencies": {
