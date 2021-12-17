@@ -4,6 +4,8 @@
 
 Champion(s): Guy Bedford, Luca Casonato
 
+Author(s): Luca Casonato
+
 Stage: 1
 
 ## Motivation
