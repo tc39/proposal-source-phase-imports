@@ -124,10 +124,17 @@ class Loader {
     // Get the host module reflection
     const module = await import(url, { as: 'source-text-module' });
 
-    // Promise for the resolution and reflection load of the dependencies (not recursive)
-    const depsPromise = Promise.all(module.constructor.imports(module).map(async ({ module: specifier }) => {
+    // Get dependency specifier set
+    const deps = new Set([
+      ...SourceTextModule.imports(module).map(({ module }) => module),
+      ...SourceTextModule.exports(module).map(({ module }) => module)
+    ]);
+    deps.delete(undefined);
+
+    // Promise for the resolution and reflection load of the dependency specifiers (not recursive)
+    const depsPromise = Promise.all([...deps].map(async specifier => {
       const id = this.resolve(specifier, parentUrl);
-      await this.getOrCreateEntry(id);
+      await this.#getOrCreateEntry(id);
       return [specifier, id];
     }));
 
