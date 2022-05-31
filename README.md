@@ -66,8 +66,8 @@ be used to inspect the module imports and exports, analogously to
 `WebAssembly.exports` and `WebAssembly.imports`.
 
 The `instantiate` method of the `SourceTextModule` class takes a global
-environment record and always returns an _unlinked_ `ModuleInstance` class,
-with the following interface:
+environment record and always returns an _unlinked_ `ModuleInstance` class
+instance with the following interface:
 
 ```js
 class ModuleInstance {
