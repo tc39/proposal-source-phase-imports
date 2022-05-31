@@ -84,8 +84,9 @@ class ModuleInstance {
 }
 ```
 
-The `SourceTextModule` represents a cached module compilation, while the
-`ModuleInstance` represents a particular module linkage and execution process.
+The `SourceTextModule` instance represents a cached module compilation, while
+the `ModuleInstance` instance represents a particular module linkage and
+execution process.
 
 * `state` trackes the `SourceTextModuleRecord` state per the current specification.
 * `link` links the `ModuleInstance` dependency specifiers to `ModuleInstance`
