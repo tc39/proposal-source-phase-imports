@@ -40,7 +40,7 @@ still being able to support the same CSP policy as the native
 [ESM integration][wasm-esm], avoiding the need for `unsafe-wasm-eval` for
 custom Wasm execution.
 
-Type type of the reflection object for a JavaScript module would be defined
+The type of the reflection object for a JavaScript module would be defined
 explicitly in this specification as a `SourceTextModule` class with the
 following interface:
 
