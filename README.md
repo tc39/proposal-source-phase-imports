@@ -72,7 +72,7 @@ instance with the following interface:
 ```js
 class ModuleInstance {
   // per current spec record state
-  state: 'unlinked' | 'linked' | 'evaluating' | 'evaluating-async' | 'evaluated';
+  state: 'unlinked' | 'linked' | 'evaluating' | 'evaluating-async' | 'evaluated' | 'errored';
   // link the dependency specifiers to their instances
   link (importObj: {
     [specifier: string]: ModuleInstance | WebAssembly.Instance
