@@ -11,7 +11,7 @@ Stage: 1
 ## Motivation
 
 For both JavaScript and WebAssembly, there is a need to be able to more closely
-customize the loading, linking and execution of modules beyond the standard host
+customize the loading, linking, and execution of modules beyond the standard host
 execution model.
 
 For WebAssembly, imports and exports for WebAssembly models often require custom
@@ -20,7 +20,7 @@ provided via manual instantiation than relying directly on the base
 [ESM integration][wasm-esm] proposal.
 
 For JavaScript, creating userland loaders would require a module reflection type
-in order to share the host parsing, execution, security and caching semantics.
+in order to share the host parsing, execution, security, and caching semantics.
 
 ## Proposal
 
@@ -162,7 +162,7 @@ class Loader {
 The reflection API has the following properties:
 
 * The spec invariants of the ES Module execution are fully guaranteed and cannot
-  be broken. Host idempotence is maintained for instance resolution, and
+  be broken. Host idempotence is maintained; for instance, resolution and
   execution semantics remain fully controlled.
 * The order of `link` calls does not matter at all, just as long as all modules
   are linked by the time top-level evaluate is called. Loader authors can run
