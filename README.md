@@ -162,7 +162,8 @@ The reflection API has the following properties:
   this as post-order or pre-order it does not affect the final execution as this
   is only a link-time construct. Calling link without all dependency specifiers
   being mapped to `ModuleInstance` or `WebAssembly.Instance` objects throws an
-  error.
+  error. `evaluate` will then also throw if any module in the linked graph is
+  not fully linked.
 * The `SourceTextModule` instance is cached by the host in its own module loader
   so that compilation for a given resource is only ever performed once, even
   between separately constructed loaders.
