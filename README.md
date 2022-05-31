@@ -56,8 +56,8 @@ class SourceTextModule {
 
   // static function to retrieve imported binding list, where "module"
   // corresponds to the module specifier being imported and "name" corresponds
-  // to the exported binding from the imported module.
-  static imports(): { module: string, name: string }[];
+  // to the exported binding from the imported module (if any).
+  static imports(): { module: string, name: string | null }[];
 }
 ```
 
