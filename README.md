@@ -131,7 +131,7 @@ class Loader {
     ]);
     deps.delete(undefined);
 
-    // Promise for the resolution and reflection load of the dependency specifiers (not recursive)
+    // Promise for the resolution and reflection load of the dependency specifiers (not recursively blocking)
     const depsPromise = Promise.all([...deps].map(async specifier => {
       const id = this.resolve(specifier, parentUrl);
       await this.#getOrCreateEntry(id);
