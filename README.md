@@ -63,7 +63,7 @@ class SourceTextModule {
 
 `SourceTextModule.exports(module)` and `SourceTextModule.imports(module)` can
 be used to inspect the module imports and exports, analogously to
-`WebAssembly.exports` and `WebAssembly.imports`.
+`WebAssembly.Module.exports` and `WebAssembly.Module.imports`.
 
 The `instantiate` method of the `SourceTextModule` class takes a global
 environment record and always returns an _unlinked_ `ModuleInstance` class
