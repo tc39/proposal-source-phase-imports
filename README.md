@@ -129,7 +129,7 @@ class Loader {
     const module = await import(url, { as: 'source-text-module' });
 
     // Promise for the resolution and reflection load of the dependency specifiers (not recursively blocking)
-    const depsPromise = Promise.all([SourceTextModule.imports(module)].map(async ({ module }) => {
+    const depsPromise = Promise.all(SourceTextModule.imports(module).map(async ({ module }) => {
       const id = this.resolve(module, parentUrl);
       await this.#getOrCreateEntry(id);
       return [module, id];
