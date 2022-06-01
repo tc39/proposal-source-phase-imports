@@ -112,13 +112,13 @@ class Loader {
 
   async import (specifier) {
     const id = this.resolve(specifier);
-    const entry = await this.getOrCreateEntry(id);
-    await this.link(entry);
+    const entry = await this.#getOrCreateEntry(id);
+    await this.#link(entry);
     await entry.instance.evaluate();
     return entry.instance.exports;
   }
-
-  async getOrCreateEntry (id, url = id) {
+ 
+  async #getOrCreateEntry (id, url = id) {
     if (this.registry.has(id)) return this.registry.get(id);
 
     // Get the host module reflection
@@ -144,14 +144,15 @@ class Loader {
     this.registry.set(id, entry);
     return entry;
   }
-
-  async link (entry) {
+ 
+  async #link (entry) {
     if (entry.instance.state !== 'unlinked') return;
+
     const deps = await entry.depsPromise;
     const importObj = {};
     for (const [specifier, id] of deps) {
       const entry = this.registry.get(id);
-      await this.link(entry);
+      await this.#link(entry);
       importObj[specifier] = entry.instance;
     }
     entry.instance.link(importObj);
