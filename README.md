@@ -49,21 +49,25 @@ class SourceTextModule {
   // create a new instance of this module, with the given global environment record
   instantiate (globalEnvironmentRecord: Record<string, Binding>): ModuleInstance;
   
-  // static function to retrieved the named exports, where "module" corresponds
-  // to the module from which this export is reexported (if any) and "name"
-  // corresponds to the exported name (or * for the case of a star re-export).
-  static exports(): { module?: string, name: string | '*' }[];
+  // static function to retrieved the named exports of the module.
+  // name is the name of the export, and '*' in the case of a star reexport,
+  // along with the module specifier being reexported
+  static exports(): ({ name: string } | { module: string, name: '*' })[];
 
   // static function to retrieve imported binding list, where "module"
-  // corresponds to the module specifier being imported and "name" corresponds
-  // to the exported binding from the imported module (if any).
-  static imports(): { module: string, name: string | null }[];
+  // corresponds to the module specifier being imported.
+  // star reexports appear as both exports and imports
+  // reexports also appear as both export entries for the named reexports
+  // as well as imports
+  static imports(): { module: string }[];
 }
 ```
 
 `SourceTextModule.exports(module)` and `SourceTextModule.imports(module)` can
 be used to inspect the module imports and exports, analogously to
-`WebAssembly.Module.exports` and `WebAssembly.Module.imports`.
+`WebAssembly.Module.exports` and `WebAssembly.Module.imports`, and in fact
+conform to the same API conventions such that code analyzing Wasm and JS
+can use similar checks.
 
 The `instantiate` method of the `SourceTextModule` class takes a global
 environment record and always returns an _unlinked_ `ModuleInstance` class
@@ -124,18 +128,11 @@ class Loader {
     // Get the host module reflection
     const module = await import(url, { as: 'source-text-module' });
 
-    // Get dependency specifier set
-    const deps = new Set([
-      ...SourceTextModule.imports(module).map(({ module }) => module),
-      ...SourceTextModule.exports(module).map(({ module }) => module)
-    ]);
-    deps.delete(undefined);
-
     // Promise for the resolution and reflection load of the dependency specifiers (not recursively blocking)
-    const depsPromise = Promise.all([...deps].map(async specifier => {
-      const id = this.resolve(specifier, parentUrl);
+    const depsPromise = Promise.all([SourceTextModule.imports(module)].map(async ({ module }) => {
+      const id = this.resolve(module, parentUrl);
       await this.#getOrCreateEntry(id);
-      return [specifier, id];
+      return [module, id];
     }));
 
     // Instantiate the host reflection
