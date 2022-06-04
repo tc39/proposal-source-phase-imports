@@ -50,8 +50,8 @@ representing a loaded and compiled JS module, with the following interface:
 
 ```js
 class SourceTextModule {
-  // create a new instance of this module, with the given global environment record
-  instantiate (globalEnvironmentRecord: Record<string, Binding>): ModuleInstance;
+  // create a new instance of this module
+  instantiate (): ModuleInstance;
 
   // each SourceTextModule is associated with an immutable source URL
   get url (): string;
@@ -86,9 +86,9 @@ the final resolution of the dependencies would not yet be known.
 
 #### Custom Instantiation & Linking
 
-The `instantiate` method of the `SourceTextModule` class takes a global
-environment record and always returns an _unlinked_ `ModuleInstance` class
-instance with the following interface:
+The `instantiate` method of the `SourceTextModule` class always returns a new
+unique _unlinked_ `ModuleInstance` class instance representing an ECMA262 module
+record with the following interface:
 
 ```js
 class ModuleInstance {
