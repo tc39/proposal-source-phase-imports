@@ -31,6 +31,8 @@ WebAssembly modules by enabling a new type of import, an import reflection:
 import x from "<specifier>" as "<reflection-type>";
 ```
 
+### Wasm Reflection
+
 The type of the reflection object for WebAssembly would be a
 `WebAssembly.Module`, as defined in the
 [WebAssembly JS integration API][wasm-js-api].
@@ -40,14 +42,19 @@ still being able to support the same CSP policy as the native
 [ESM integration][wasm-esm], avoiding the need for `unsafe-wasm-eval` for
 custom Wasm execution.
 
+### JS Reflection
+
 The type of the reflection object for a JavaScript module would be defined
 explicitly in this specification as a new global, `SourceTextModule`, a class
-with the following interface:
+representing a loaded and compiled JS module, with the following interface:
 
 ```js
 class SourceTextModule {
   // create a new instance of this module, with the given global environment record
   instantiate (globalEnvironmentRecord: Record<string, Binding>): ModuleInstance;
+
+  // each SourceTextModule is associated with an immutable source URL
+  get url (): string;
   
   // static function to retrieved the named exports of the module.
   // name is the name of the export, and '*' in the case of a star reexport,
@@ -73,6 +80,12 @@ be used to inspect the module imports and exports, analogously to
 conform to the same API conventions such that code analyzing Wasm and JS
 can use similar checks.
 
+Importing a reflected module would cause that module to be preloaded and
+precompiled, although it would not result in recursive dependency fetching as
+the final resolution of the dependencies would not yet be known.
+
+#### Custom Instantiation & Linking
+
 The `instantiate` method of the `SourceTextModule` class takes a global
 environment record and always returns an _unlinked_ `ModuleInstance` class
 instance with the following interface:
@@ -81,7 +94,7 @@ instance with the following interface:
 class ModuleInstance {
   // per current spec record state
   state: 'unlinked' | 'linked' | 'evaluating' | 'evaluating-async' | 'evaluated' | 'errored';
-  // initialized import.meta object per the default host setup
+  // initialized import.meta object per the default host initialization
   // available before evaluation for modification
   meta: Object,
   // link the dependency specifiers to their instances
@@ -112,7 +125,7 @@ execution process.
 [wasm-js-api]: https://webassembly.github.io/spec/js-api/#modules
 [wasm-esm]: https://github.com/WebAssembly/esm-integration/tree/master/proposals/esm-integration
 
-## Custom Loader Construction
+#### Custom Loader Construction
 
 To demonstrate creating a complete custom loader using the `SourceTextModule`
 JS reflection API:
@@ -120,7 +133,6 @@ JS reflection API:
 ```js
 class Loader {
   constructor () {
-    this.globalEnv = globalThis;
     this.resolve = (url, parentUrl = baseUrl) => new URL(url, parentUrl);
     this.registry = new Map();
   }
@@ -147,7 +159,7 @@ class Loader {
     }));
 
     // Instantiate the host reflection
-    const instance = module.instantiate(this.globalEnv);
+    const instance = module.instantiate();
     const entry = { instance, depsPromise };
     this.registry.set(id, entry);
     return entry;
@@ -278,6 +290,27 @@ with systems to restrict permissions, such as Deno.
 On the web platform, there are other APIs that have the ability to load ES
 modules. These also need to be able to specify import reflection. Here are
 some examples of how these might look.
+
+### Workers
+
+It should be possible to pass `SourceTextModule` records between workers by
+supporting structured clone, just like `WebAssembly.Module` does.
+
+### Module Blocks
+
+Interactions with module blocks might include:
+
+* Supporting `link()` against a module block to resolve dependencies of
+  `SourceTextModule` records to module blocks as well as JS and Wasm modules.
+* Module blocks might want to suppot the `SourceTextModule.imports(block)` and
+  `SourceTextModule.exports(block)` reflection APIs.
+* If module blocks were to want to support custom instantiation (instead of just
+  the default host instantiation), they could support the
+  `SourceTextModule.prototype.instantiate()` API to generate a `ModuleInstance`
+  from a `ModuleBlock`.
+
+All of the above are possible and additive between the existing specs, requiring
+no other known major alignment work.
 
 ## Cache Key Semantics
 
