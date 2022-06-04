@@ -81,6 +81,9 @@ instance with the following interface:
 class ModuleInstance {
   // per current spec record state
   state: 'unlinked' | 'linked' | 'evaluating' | 'evaluating-async' | 'evaluated' | 'errored';
+  // initialized import.meta object per the default host setup
+  // available before evaluation for modification
+  meta: Object,
   // link the dependency specifiers to their instances
   link (importObj: {
     [specifier: string]: ModuleInstance | WebAssembly.Instance
