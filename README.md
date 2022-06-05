@@ -52,9 +52,6 @@ representing a loaded and compiled JS module, with the following interface:
 class SourceTextModule {
   // create a new instance of this module
   instantiate (): ModuleInstance;
-
-  // each SourceTextModule is associated with an immutable source URL
-  get url (): string;
   
   // static function to retrieved the named exports of the module.
   // name is the name of the export, and '*' in the case of a star reexport,
@@ -93,18 +90,20 @@ record with the following interface:
 ```js
 class ModuleInstance {
   // per current spec record state
-  state: 'unlinked' | 'linked' | 'evaluating' | 'evaluating-async' | 'evaluated' | 'errored';
+  get state(): 'unlinked' | 'linked' | 'evaluating' | 'evaluating-async' | 'evaluated' | 'errored';
   // initialized import.meta object per the default host initialization
   // available before evaluation for modification
-  meta: Object,
+  get meta(): Object,
   // link the dependency specifiers to their instances
+  // can only be called once
   link (importObj: {
     [specifier: string]: ModuleInstance | WebAssembly.Instance
   });
   // evaluate an instance
+  // can only be called once
   evaluate (): void | Promise<void>;
   // access the namespace once evaluated
-  exports: null | ModuleNamespaceExoticObject;
+  get namespace(): ModuleNamespaceExoticObject;
 }
 ```
 
