@@ -116,10 +116,13 @@ the `ModuleInstance` instance represents a particular module linkage and
 execution process.
 
 * `state` trackes the `SourceTextModuleRecord` state per the current specification.
+* `meta` provides the import meta host object as created at instantiation time.
 * `link` links the `ModuleInstance` dependency specifiers to `ModuleInstance`
   or `WebAssembly.Instance` modules.
 * `evaluate` triggers the top-level `Evaluate()` method for the entire linked
   execution graph.
+* `namespace` the module namespace exotic object associated with this module,
+  available at instantiation time.
 
 [wasm-js-api]: https://webassembly.github.io/spec/js-api/#modules
 [wasm-esm]: https://github.com/WebAssembly/esm-integration/tree/master/proposals/esm-integration
