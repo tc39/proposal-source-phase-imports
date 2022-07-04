@@ -2,100 +2,88 @@
 
 ## Status
 
-Champion(s): Guy Bedford, Luca Casonato
+Champion(s): Luca Casonato, Guy Bedford
 
-Author(s): Luca Casonato
+Author(s): Luca Casonato, Guy Bedford
 
 Stage: 1
 
 ## Motivation
 
-The WebAssembly [ECMAScript module integration proposal][wasm-esm] proposes direct
-integration of WebAssembly into the ES module system based on sharing JS and Wasm
-_module instances_ resolved by JS and Wasm imports.
+For both JavaScript and WebAssembly, there is a need to be able to more closely
+customize the loading, linking, and execution of modules beyond the standard host
+execution model.
 
-The Web Assembly [Module Linking Proposal][] extends the requirements for the
-ESM host integration to support a secondary type of module import - a
-_module type import_ as distinct from an _instance import_. Where an instance import
-would return a fully linked and evaluated `WebAssembly.Instance`, a module import
-would return the compiled but unlinked and unexecuted `WebAssembly.Module` object.
+For WebAssembly, imports and exports for WebAssembly models often require custom
+inspection and wrapping in order to behave correctly, which can be better
+provided via manual instantiation than relying directly on the base
+[ESM integration][wasm-esm] proposal.
 
-In the module linking proposal both types of object are importable and can be
-associated with the same imported Wasm module asset. In essence, the module type import
-provides the module constructor to create custom instances as having separate
-linear memory and linked bindings.
-
-The ability to obtain a module or an instance provides higher level control over the
-Wasm execution sandbox, which ends up being an important practical requirement in
-many Web Assembly workflows.
-
-The requirement for the ESM integration would thus be that two imports of the same
-asset may return a distinct ES module result based on some import hint.
-
-This proposal, using the principle of equal capability, proposes a similar hint
-to be in the form of ECMAScript syntax that enables the module import syntax to
-include import reflection syntax to indicate an alternative reflective API import,
-with the primary use case in mind of permitting these module type imports for Wasm.
-
-[Module Linking Proposal]: https://github.com/WebAssembly/module-linking/blob/master/proposals/module-linking/Explainer.md
-[wasm-esm]: https://github.com/WebAssembly/esm-integration/tree/master/proposals/esm-integration
+For JavaScript, creating userland loaders would require a module reflection type
+in order to share the host parsing, execution, security, and caching semantics.
 
 ## Proposal
 
-The proposal is to permit an optional string literal attribute to be associated
-with any import:
+This proposal enables module reflection capabilities for both JavaScript and
+WebAssembly modules by enabling a new type of import, an import reflection:
 
 ```js
-import x from "<specifier>" as "<reflection-type>";
+import module x from "<specifier>";
 ```
 
-Here the import reflection type is added to the end of the ImportStatement,
-prefixed by the "as" keyword. If combined with an import assertion, the
-assertion must always come _before_ the reflection type:
+Here the module reflection keyword is added to the beginning of the ImportStatement.
 
-```js
-import x from "<specifier>" assert {} as "<reflection-type>";
-```
-
-It is also possible to specify an import reflection if the import is not
-bound:
-
-```js
-import "<specifier>" as "<reflection-type>";
-```
-
-### Re-export statements
-
-```js
-export { default as x } from "<specifier>" as "<reflection-type>";
-```
-
-For re-export statements, the syntax is essentially identical to import
-statements.
+Only the above form is supported - named exports and unbound declarations are not supported.
 
 ### Dynamic import()
 
 ```js
-const x = await import("<specifier>", { as: "<reflection-type>" });
+const x = await import("<specifier>", { reflect: "module" });
 ```
 
-For dynamic imports, import reflection is specified in the same second attribute
-options bag that import assertions are specified in. The ordering of
-`asserts` vs `as` does not matter here.
+For dynamic imports, module import reflection is specified in the same second attribute
+options bag that import assertions are specified in, using the `reflect` key.
+
+If the [asset references proposal][] advances
+in future it could share this same `reflect` key for dynamic asset imports as being symmetrical reflections:
+
+```js
+import asset x from "<specifier>";
+await import("<specifier>", { reflect: "asset" });
+```
+
+Only the `module` reflection is specified by this proposal.
+
+### JS Reflection
+
+The type of the reflection object for a JavaScript module is currently host-defined,
+but the goal would be for this to be a similar object to what is used by the
+[module blocks][] specification or the [compartments][] specification.
+
+### Wasm Reflection
+
+The type of the reflection object for WebAssembly would be a
+`WebAssembly.Module`, as defined in the
+[WebAssembly JS integration API][wasm-js-api].
+
+The reflection would represent an unlinked and uninstantiated module, while
+still being able to support the same CSP policy as the native
+[ESM integration][wasm-esm], avoiding the need for `unsafe-wasm-eval` for
+custom Wasm execution.
+
+Since reflection is defined through a host hook, this Wasm reflection is left
+to be specified in the Wasm [ESM Integration][wasm-esm].
 
 ## Integration with other specs and environments
 
 ### WebAssembly ESM Integration
 
-Import a WebAssembly binary as a compiled module:
-
 ##### `WebAssembly.Module` imports
 
-As explained in the motivation, supporting a `"wasm-module"` import reflection is a driving use case for this specification in order to change the behaviour of
-importing a direct compiled but unlinked [Wasm module object](https://webassembly.github.io/spec/js-api/index.html#modules):
+As explained in the motivation, supporting a `WebAssembly.Module` import reflection is a driving use case for this specification in order to change the behaviour of importing a direct compiled but unlinked [Wasm module object][]:
 
 ```js
-import FooModule from "./foo.wasm" as "wasm-module";
+import module FooModule from "./foo.wasm";
 FooModule instanceof WebAssembly.Module; // true
 
 // For example, to run a WASI execution with an API like Node.js WASI:
@@ -112,48 +100,60 @@ wasi.start(fooInstance);
 #### Imports from WebAssembly
 
 Web Assembly would have the ability to expose import reflection in its
-imports if desired, as the [Module Linking proposal currently aims to specify](https://github.com/WebAssembly/module-linking/blob/main/proposals/module-linking/Binary.md#import-section-updates).
-
+imports if desired, as the [Module Linking proposal currently aims to specify][module-linking].
 
 #### Security improvements
 
-[CSP][] is a web platform feature that allows you to limit the capabilities the platform grants to a
-given site.
+The ability to relate a script or module to how it was obtained is an important
+security property on the web and other JS runtimes. [CSP][] is the most well-known web platform feature that allows you to limit the capabilities the platform grants to a given site.
 
-A common use is to disallow dynamic code generation means like `eval`. WASM compilation is
-unfortunatly completly dynamic right now (manual network fetch + compile), so WASM unconditionally
-requires a `script-src: unsafe-eval` CSP attribute. This makes WASM a potential security risk.
+A common use is to disallow dynamic code generation means like `eval`. Wasm
+compilation is unfortunatly completly dynamic right now (manual network fetch +
+compile), so Wasm unconditionally requires a `script-src: unsafe-wasm-eval` CSP
+attribute.
 
-With this proposal, the WASM module would be known statically, so would not have to be considered as
-dynamic code generation. This would allow the web platform to lift this restriction for statically
-imported WASM modules, and instead just require `script-src: self` like for JS. Also see
+With this proposal, the Wasm module would be known statically, so would not have
+to be considered as dynamic code generation. This would allow the web platform
+to lift this restriction for statically imported Wasm modules, and instead just
+require `script-src: self` (or possibly `wasm-src: self`) like for JS. Also see
 https://github.com/WebAssembly/esm-integration/issues/56.
 
-This does not just impact platforms using CSP, but also other platforms with systems to restrict
-permissions, such as Deno.
+This property does not just impact platforms using CSP, but also other platforms
+with systems to restrict permissions, such as Deno.
 
-[CSP]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy
+### Workers
 
-### HTML spec
+It should be possible to pass `SourceTextModule` records between workers by
+supporting structured clone, just like `WebAssembly.Module` does.
 
-On the web platform, there are other APIs that have the ability to load ES
-modules. These also need to be able to specify import reflection. Here are
-some examples of how these might look.
+### Module Blocks
 
-#### Web Workers
+Ideally this proposal would use the module object defined by the [module blocks][] proposal.
+
+Just as module blocks permit the dynamic import of blocks relating to their primary host instance,
+it could be worth supporting the same for `WebAssembly.Module` for symmetry under a reflection model:
 
 ```js
-const worker = new Worker("<specifier>", {
-  type: "module",
-  as: "<reflection-type>",
-});
+import module WasmModule from './module.wasm';
+
+WasmModule instanceof WebAssembly.Module; // true
+
+await import(WasmModule); // returns the fully linked and instantiated ModuleNamespace
 ```
 
-#### `<script>` tags
+It is currently not clear if this would provide any strong benefits, therefore it is not currently specified, but could be an option for additions to this specification.
 
-```html
-<script href="<specifier>" type="module" as="<reflection-type>" ></script>
-```
+Implementing the above would require new specification machinery to relate a special internal slot on the `WebAssembly.Module`
+to its Cyclic Module Record. One benefit of this approach would also be enabling Wasm modules to participate in cycles with JS modules.
+
+### Compartments
+
+Import reflection aims to be compatible with compartments hooks.
+
+Compartment hooks may benefit from the ability to securely import module records as discussed in the security section.
+
+This would allow creating custom loaders without requiring relaxing the security guarantees of the environment
+since all compiled modules being loaded can be fully audited by the host instead of having to enable arbitrary modular evaluation string sources.
 
 ## Cache Key Semantics
 
@@ -191,15 +191,6 @@ do not influence the HostResolveImportedModule idempotency requirements. This
 proposal does. Also see
 https://github.com/tc39/proposal-import-assertions#follow-up-proposal-evaluator-attributes.
 
-**Q**: Are there use cases for this feature other than Web Assembly imports?
-
-**A**: One way of thinking about import reflections is that they vary the representation
-of a module being imported. If JS itself ever wanted to reflect module imports at a higher
-level of abstraction that is something that might be enabled by this work, for example being
-able to import an unexecuted JS module object that could be passed around. Simiarly, any asset
-imports that might have different representations in JS would benefit from import reflection
-that vary the way in which the module is reflected through importing.
-
 **Q**: Would this proposal enable the importing of other languages directly as modules?
 
 **A**: While hosts may define import reflection, expanding the evaluation of
@@ -211,3 +202,12 @@ arbitrary language syntax to the web is not seen as a motivating use case for th
 graph, it is easier to statically analyze (by bundlers for example). Secondly when using CSP,
 `script-src: unsafe-eval` would not be needed. See the security improvements section for more
 details.
+
+[CSP]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy
+[Wasm module object]: https://webassembly.github.io/spec/js-api/index.html#modules
+[asset references proposal]: https://github.com/tc39/proposal-asset-references
+[compartments]: https://github.com/tc39/proposal-compartments
+[module-linking]: https://github.com/WebAssembly/module-linking/blob/main/proposals/module-linking/Binary.md#import-section-updates
+[module blocks]: https://github.com/tc39/proposal-js-module-blocks
+[wasm-js-api]: https://webassembly.github.io/spec/js-api/#modules
+[wasm-esm]: https://github.com/WebAssembly/esm-integration/tree/master/proposals/esm-integration
