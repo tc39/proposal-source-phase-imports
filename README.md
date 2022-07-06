@@ -121,11 +121,6 @@ https://github.com/WebAssembly/esm-integration/issues/56.
 This property does not just impact platforms using CSP, but also other platforms
 with systems to restrict permissions, such as Deno.
 
-### Workers
-
-It should be possible to pass `SourceTextModule` records between workers by
-supporting structured clone, just like `WebAssembly.Module` does.
-
 ### Module Blocks
 
 Ideally this proposal would use the module object defined by the [module blocks][] proposal.
@@ -154,6 +149,10 @@ Compartment hooks may benefit from the ability to securely import module records
 
 This would allow creating custom loaders without requiring relaxing the security guarantees of the environment
 since all compiled modules being loaded can be fully audited by the host instead of having to enable arbitrary modular evaluation string sources.
+
+### Workers
+
+Since `WebAssembly.Module` and the `Module` object in module blocks both support being passed to a worker, we should with this alignment have all reflections being worker-compatible.
 
 ## Cache Key Semantics
 
