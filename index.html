@@ -3,7 +3,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.0.1/styles/base16/solarized-light.min.css"><link rel="stylesheet" href="./spec.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/8.4/styles/github.min.css">
 <script src="./spec.js"></script>
-<title>Proposal Title Goes Here</title><script>'use strict';
+<title>Import Reflection</title><script>'use strict';
 let sdoBox = {
   init() {
     this.$alternativeId = null;
@@ -135,7 +135,7 @@ Search.prototype.loadBiblio = function () {
 };
 
 Search.prototype.documentKeydown = function (e) {
-  if (e.keyCode === 191) {
+  if (e.key === '/') {
     e.preventDefault();
     e.stopPropagation();
     this.triggerSearch();
@@ -190,7 +190,7 @@ function relevance(result) {
     relevance += 2048;
   }
 
-  relevance += Math.max(0, 255 - result.entry.key.length);
+  relevance += Math.max(0, 255 - result.key.length);
 
   return relevance;
 }
@@ -214,20 +214,21 @@ Search.prototype.search = function (searchString) {
   if (/^[\d.]*$/.test(searchString)) {
     results = this.biblio.clauses
       .filter(clause => clause.number.substring(0, searchString.length) === searchString)
-      .map(clause => ({ entry: clause }));
+      .map(clause => ({ key: getKey(clause), entry: clause }));
   } else {
     results = [];
 
     for (let i = 0; i < this.biblio.entries.length; i++) {
       let entry = this.biblio.entries[i];
-      if (!entry.key) {
+      let key = getKey(entry);
+      if (!key) {
         // biblio entries without a key aren't searchable
         continue;
       }
 
-      let match = fuzzysearch(searchString, entry.key);
+      let match = fuzzysearch(searchString, key);
       if (match) {
-        results.push({ entry, match });
+        results.push({ key, entry, match });
       }
     }
 
@@ -276,6 +277,7 @@ Search.prototype.displayResults = function (results) {
     let html = '<ul>';
 
     results.forEach(result => {
+      let key = result.key;
       let entry = result.entry;
       let id = entry.id;
       let cssClass = '';
@@ -283,19 +285,19 @@ Search.prototype.displayResults = function (results) {
 
       if (entry.type === 'clause') {
         let number = entry.number ? entry.number + ' ' : '';
-        text = number + entry.key;
+        text = number + key;
         cssClass = 'clause';
         id = entry.id;
       } else if (entry.type === 'production') {
-        text = entry.key;
+        text = key;
         cssClass = 'prod';
         id = entry.id;
       } else if (entry.type === 'op') {
-        text = entry.key;
+        text = key;
         cssClass = 'op';
         id = entry.id || entry.refId;
       } else if (entry.type === 'term') {
-        text = entry.key;
+        text = key;
         cssClass = 'term';
         id = entry.id || entry.refId;
       }
@@ -314,6 +316,31 @@ Search.prototype.displayResults = function (results) {
     this.$searchResults.classList.add('no-results');
   }
 };
+
+function getKey(item) {
+  if (item.key) {
+    return item.key;
+  }
+  switch (item.type) {
+    case 'clause':
+      return item.title || item.titleHTML;
+    case 'production':
+      return item.name;
+    case 'op':
+      return item.aoid;
+    case 'term':
+      return item.term;
+    case 'table':
+    case 'figure':
+    case 'example':
+    case 'note':
+      return item.caption;
+    case 'step':
+      return item.id;
+    default:
+      throw new Error("Can't get key for " + item.type);
+  }
+}
 
 function Menu() {
   this.$toggle = document.getElementById('menu-toggle');
@@ -507,7 +534,7 @@ Menu.prototype.addPinEntry = function (id) {
     // prettier-ignore
     this.$pinList.innerHTML += `<li><a href="${makeLinkToId(entry.id)}">${prefix}${entry.titleHTML}</a></li>`;
   } else {
-    this.$pinList.innerHTML += `<li><a href="${makeLinkToId(entry.id)}">${entry.key}</a></li>`;
+    this.$pinList.innerHTML += `<li><a href="${makeLinkToId(entry.id)}">${getKey(entry)}</a></li>`;
   }
 
   if (Object.keys(this._pinnedIds).length === 0) {
@@ -782,7 +809,7 @@ let referencePane = {
     this.$headerRefId.textContent = '#' + entry.id;
     this.$headerRefId.setAttribute('href', makeLinkToId(entry.id));
     this.$headerRefId.style.display = 'inline';
-    entry.referencingIds
+    (entry.referencingIds || [])
       .map(id => {
         let cid = menu.search.biblio.refParentClause[id];
         let clause = menu.search.biblio.byId[cid];
@@ -875,6 +902,7 @@ let Toolbox = {
       e.preventDefault();
       e.stopPropagation();
       menu.togglePinEntry(this.entry.id);
+      this.$pinLink.textContent = menu._pinnedIds[this.entry.id] ? 'Unpin' : 'Pin';
     });
 
     this.$refsLink = document.createElement('a');
@@ -895,6 +923,7 @@ let Toolbox = {
     sdoBox.deactivate();
     this.active = true;
     this.entry = entry;
+    this.$pinLink.textContent = menu._pinnedIds[entry.id] ? 'Unpin' : 'Pin';
     this.$outer.classList.add('active');
     this.top = el.offsetTop - this.$outer.offsetHeight;
     this.left = el.offsetLeft - 10;
@@ -913,7 +942,7 @@ let Toolbox = {
   },
 
   updateReferences() {
-    this.$refsLink.textContent = `References (${this.entry.referencingIds.length})`;
+    this.$refsLink.textContent = `References (${(this.entry.referencingIds || []).length})`;
   },
 
   activateIfMouseOver(e) {
@@ -1034,7 +1063,10 @@ function doShortcut(e) {
   if (name === 'textarea' || name === 'input' || name === 'select' || target.isContentEditable) {
     return;
   }
-  if (e.key === 'm' && !e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && usesMultipage) {
+  if (e.altKey || e.ctrlKey || e.metaKey) {
+    return;
+  }
+  if (e.key === 'm' && usesMultipage) {
     let pathParts = location.pathname.split('/');
     let hash = location.hash;
     if (pathParts[pathParts.length - 2] === 'multipage') {
@@ -1051,6 +1083,10 @@ function doShortcut(e) {
     } else {
       location = 'multipage/' + hash;
     }
+  } else if (e.key === 'u') {
+    document.documentElement.classList.toggle('show-ao-annotations');
+  } else if (e.key === '?') {
+    document.getElementById('shortcuts-help').classList.toggle('active');
   }
 }
 
@@ -1066,8 +1102,11 @@ function init() {
   document.addEventListener(
     'keydown',
     debounce(e => {
-      if (e.code === 'Escape' && Toolbox.active) {
-        Toolbox.deactivate();
+      if (e.code === 'Escape') {
+        if (Toolbox.active) {
+          Toolbox.deactivate();
+        }
+        document.getElementById('shortcuts-help').classList.remove('active');
       }
     })
   );
@@ -1078,6 +1117,114 @@ document.addEventListener('keypress', doShortcut);
 document.addEventListener('DOMContentLoaded', () => {
   Toolbox.init();
   referencePane.init();
+});
+
+// preserve state during navigation
+
+function getTocPath(li) {
+  let path = [];
+  let pointer = li;
+  while (true) {
+    let parent = pointer.parentElement;
+    if (parent == null) {
+      return null;
+    }
+    let index = [].indexOf.call(parent.children, pointer);
+    if (index == -1) {
+      return null;
+    }
+    path.unshift(index);
+    pointer = parent.parentElement;
+    if (pointer == null) {
+      return null;
+    }
+    if (pointer.id === 'menu-toc') {
+      break;
+    }
+    if (pointer.tagName !== 'LI') {
+      return null;
+    }
+  }
+  return path;
+}
+
+function activateTocPath(path) {
+  try {
+    let pointer = document.getElementById('menu-toc');
+    for (let index of path) {
+      pointer = pointer.querySelector('ol').children[index];
+    }
+    pointer.classList.add('active');
+  } catch (e) {
+    // pass
+  }
+}
+
+function getActiveTocPaths() {
+  return [...menu.$menu.querySelectorAll('.active')].map(getTocPath).filter(p => p != null);
+}
+
+function loadStateFromSessionStorage() {
+  if (!window.sessionStorage || typeof menu === 'undefined' || window.navigating) {
+    return;
+  }
+  if (sessionStorage.referencePaneState != null) {
+    let state = JSON.parse(sessionStorage.referencePaneState);
+    if (state != null) {
+      if (state.type === 'ref') {
+        let entry = menu.search.biblio.byId[state.id];
+        if (entry != null) {
+          referencePane.showReferencesFor(entry);
+        }
+      } else if (state.type === 'sdo') {
+        let sdos = sdoMap[state.id];
+        if (sdos != null) {
+          referencePane.$headerText.innerHTML = state.html;
+          referencePane.showSDOsBody(sdos, state.id);
+        }
+      }
+      delete sessionStorage.referencePaneState;
+    }
+  }
+
+  if (sessionStorage.activeTocPaths != null) {
+    document
+      .getElementById('menu-toc')
+      .querySelectorAll('.active')
+      .forEach(e => {
+        e.classList.remove('active');
+      });
+    let active = JSON.parse(sessionStorage.activeTocPaths);
+    active.forEach(activateTocPath);
+    delete sessionStorage.activeTocPaths;
+  }
+
+  if (sessionStorage.searchValue != null) {
+    let value = JSON.parse(sessionStorage.searchValue);
+    menu.search.$searchBox.value = value;
+    menu.search.search(value);
+    delete sessionStorage.searchValue;
+  }
+
+  if (sessionStorage.tocScroll != null) {
+    let tocScroll = JSON.parse(sessionStorage.tocScroll);
+    menu.$toc.scrollTop = tocScroll;
+    delete sessionStorage.tocScroll;
+  }
+}
+
+document.addEventListener('DOMContentLoaded', loadStateFromSessionStorage);
+
+window.addEventListener('pageshow', loadStateFromSessionStorage);
+
+window.addEventListener('beforeunload', () => {
+  if (!window.sessionStorage || typeof menu === 'undefined') {
+    return;
+  }
+  sessionStorage.referencePaneState = JSON.stringify(referencePane.state || null);
+  sessionStorage.activeTocPaths = JSON.stringify(getActiveTocPaths());
+  sessionStorage.searchValue = JSON.stringify(menu.search.$searchBox.value);
+  sessionStorage.tocScroll = JSON.stringify(menu.$toc.scrollTop);
 });
 
 'use strict';
@@ -1111,8 +1258,8 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-let sdoMap = JSON.parse(`{}`);
-let biblio = JSON.parse(`{"refsByClause":{"sec-demo-clause":["_ref_0"]},"entries":[{"type":"clause","id":"sec-demo-clause","aoid":null,"titleHTML":"This is an emu-clause","number":"1","referencingIds":[],"key":"This is an emu-clause"},{"type":"clause","id":"sec-copyright-and-software-license","aoid":null,"titleHTML":"Copyright &amp; Software License","number":"A","referencingIds":[],"key":"Copyright & Software License"}]}`);
+let sdoMap = JSON.parse(`{"prod-WzAgO-V_":{"ModuleRequests":{"clause":"2.1.1.1","ids":["prod-Fii3Jv-w"]},"ImportEntries":{"clause":"2.2.1","ids":["prod-4FL2ok6-"]}},"prod-F02Rz8zd":{"ModuleRequests":{"clause":"2.1.1.1","ids":["prod-1z-7quqL"]},"ImportEntries":{"clause":"2.2.1","ids":["prod-3Lmk94i-"]}},"prod-hjv695N2":{"ModuleRequests":{"clause":"2.1.1.1","ids":["prod-geKEXfWi"]}},"prod-CDGJVPkq":{"ImportEntries":{"clause":"2.2.1","ids":["prod--ST7ch2j"]}}}`);
+let biblio = JSON.parse(`{"refsByClause":{"sec-cyclic-module-records":["_ref_0","_ref_10","_ref_11","_ref_12","_ref_13","_ref_14","_ref_15","_ref_31","_ref_32"],"sec-source-text-module-records":["_ref_1","_ref_16","_ref_17","_ref_33","_ref_34"],"sec-hostresolvemodulereflection":["_ref_2","_ref_35"],"sec-hostimportmoduledynamically":["_ref_3","_ref_36"],"sec-finishdynamicimport":["_ref_4"],"sec-static-semantics-modulerequests":["_ref_5","_ref_6","_ref_7","_ref_8","_ref_9","_ref_24","_ref_25","_ref_26","_ref_27","_ref_28","_ref_29","_ref_30"],"sec-source-text-module-record-initialize-environment":["_ref_18"],"sec-static-semantics-importentries":["_ref_19","_ref_20","_ref_21","_ref_22","_ref_23","_ref_59","_ref_60","_ref_61","_ref_62","_ref_63","_ref_64","_ref_65","_ref_66"],"sec-imports":["_ref_37","_ref_38","_ref_39","_ref_40","_ref_41","_ref_42","_ref_43","_ref_44","_ref_45","_ref_46","_ref_47","_ref_48","_ref_49","_ref_50","_ref_51","_ref_52","_ref_53","_ref_54","_ref_55","_ref_56","_ref_57","_ref_58"]},"entries":[{"type":"clause","id":"sec-evaluate-import-call","title":"EvaluateImportCall ( specifierExpression , optionsExpression )","titleHTML":"<ins>EvaluateImportCall ( <var>specifierExpression</var> , <var>optionsExpression</var> )</ins>","number":"1.1.1.1"},{"type":"clause","id":"sec-import-call-runtime-semantics-evaluation","titleHTML":"Runtime Semantics: Evaluation","number":"1.1.1"},{"type":"clause","id":"sec-import-calls","titleHTML":"Import Calls","number":"1.1","referencingIds":["_ref_2","_ref_3","_ref_4"]},{"type":"clause","id":"sec-ecmascript-language-expressions","titleHTML":"ECMAScript Language: Expressions","number":"1"},{"type":"op","aoid":"ModuleRequests","refId":"sec-static-semantics-modulerequests"},{"type":"clause","id":"sec-static-semantics-modulerequests","titleHTML":"Static Semantics: ModuleRequests","number":"2.1.1.1","referencingIds":["_ref_5","_ref_6","_ref_7","_ref_8","_ref_9","_ref_22"]},{"type":"term","term":"Cyclic Module Record","id":"cyclic-module-record","referencingIds":["_ref_10","_ref_11","_ref_12","_ref_13","_ref_14","_ref_15"]},{"type":"table","id":"table-cyclic-module-fields","number":1,"caption":"Table 1: Additional Fields of Cyclic Module Records","referencingIds":["_ref_0"]},{"type":"clause","id":"sec-cyclic-module-records","titleHTML":"Cyclic Module Records","number":"2.1.1.2"},{"type":"term","term":"ImportEntry Record","id":"importentry-record","referencingIds":["_ref_16","_ref_17","_ref_18","_ref_19","_ref_23"]},{"type":"table","id":"table-importentry-record-fields","number":2,"caption":"Table 2: ImportEntry Record Fields","referencingIds":["_ref_1"]},{"type":"clause","id":"sec-source-text-module-record-initialize-environment","titleHTML":"InitializeEnvironment ( )","number":"2.1.1.3.1"},{"type":"clause","id":"sec-source-text-module-records","titleHTML":"Source Text Module Records","number":"2.1.1.3"},{"type":"clause","id":"sec-hostresolvemodulereflection","title":"\\n          HostResolveModuleReflection (\\n            referencingScriptOrModule: a Script Record, a Module Record, or null,\\n            specifier: a ModuleSpecifier String,\\n          ): either a normal completion containing an Object or a throw completion\\n        ","titleHTML":"\\n          <ins>HostResolveModuleReflection (\\n            <var>referencingScriptOrModule</var>: a Script Record, a Module Record, or <emu-val>null</emu-val>,\\n            <var>specifier</var>: a <emu-nt>ModuleSpecifier</emu-nt> String,\\n          ): either a normal completion containing an Object or a throw completion</ins>\\n        ","number":"2.1.1.4"},{"type":"clause","id":"sec-hostimportmoduledynamically","title":"\\n          HostImportModuleDynamically (\\n            referencingScriptOrModule: a Script Record, a Module Record, or null,\\n            specifier: a ModuleSpecifier String,\\n            reflection: none or module,\\n            promiseCapability: a PromiseCapability Record,\\n          ): unused\\n        ","titleHTML":"\\n          HostImportModuleDynamically (\\n            <var>referencingScriptOrModule</var>: a Script Record, a Module Record, or <emu-val>null</emu-val>,\\n            <var>specifier</var>: a <emu-nt>ModuleSpecifier</emu-nt> String,\\n            <ins><var>reflection</var>: <emu-const>none</emu-const> or <emu-const>module</emu-const>,</ins>\\n            <var>promiseCapability</var>: a PromiseCapability Record,\\n          ): <emu-const>unused</emu-const>\\n        ","number":"2.1.1.5"},{"type":"clause","id":"sec-finishdynamicimport","title":"\\n          FinishDynamicImport (\\n            referencingScriptOrModule: unknown,\\n            specifier: unknown,\\n            reflection: none or module ,\\n            promiseCapability: a PromiseCapability Record,\\n            innerPromise: unknown,\\n          ): unused\\n        ","titleHTML":"\\n          FinishDynamicImport (\\n            <var>referencingScriptOrModule</var>: unknown,\\n            <var>specifier</var>: unknown,\\n            <ins><var>reflection</var>: <emu-const>none</emu-const> or <emu-const>module</emu-const> ,</ins>\\n            <var>promiseCapability</var>: a PromiseCapability Record,\\n            <var>innerPromise</var>: unknown,\\n          ): <emu-const>unused</emu-const>\\n        ","number":"2.1.1.6"},{"type":"clause","id":"sec-module-semantics","titleHTML":"Module Semantics","number":"2.1.1"},{"type":"clause","id":"sec-modules","titleHTML":"Modules","number":"2.1"},{"type":"production","id":"prod-ImportDeclaration","name":"ImportDeclaration","referencingIds":["_ref_34"]},{"type":"production","id":"prod-ImportClause","name":"ImportClause","referencingIds":["_ref_24","_ref_37","_ref_59","_ref_62"]},{"type":"production","id":"prod-ImportedDefaultBinding","name":"ImportedDefaultBinding","referencingIds":["_ref_42","_ref_45","_ref_47"]},{"type":"production","id":"prod-NameSpaceImport","name":"NameSpaceImport","referencingIds":["_ref_43","_ref_46"]},{"type":"production","id":"prod-NamedImports","name":"NamedImports","referencingIds":["_ref_44","_ref_48"]},{"type":"production","id":"prod-FromClause","name":"FromClause","referencingIds":["_ref_25","_ref_26","_ref_28","_ref_29","_ref_30","_ref_38","_ref_41","_ref_60","_ref_61","_ref_65"]},{"type":"production","id":"prod-ImportsList","name":"ImportsList","referencingIds":["_ref_51","_ref_52","_ref_55"]},{"type":"production","id":"prod-ImportSpecifier","name":"ImportSpecifier","referencingIds":["_ref_54","_ref_56"]},{"type":"production","id":"prod-ModuleSpecifier","name":"ModuleSpecifier","referencingIds":["_ref_31","_ref_32","_ref_33","_ref_35","_ref_36","_ref_39","_ref_53","_ref_63"]},{"type":"production","id":"prod-ImportedBinding","name":"ImportedBinding","referencingIds":["_ref_27","_ref_40","_ref_49","_ref_50","_ref_57","_ref_58","_ref_64","_ref_66"]},{"type":"op","aoid":"ImportEntries","refId":"sec-static-semantics-importentries"},{"type":"clause","id":"sec-static-semantics-importentries","titleHTML":"Static Semantics: ImportEntries ( )","number":"2.2.1","referencingIds":["_ref_20","_ref_21"]},{"type":"clause","id":"sec-imports","titleHTML":"Imports","number":"2.2"},{"type":"clause","id":"sec-ecmascript-language-scripts-and-modules","titleHTML":"ECMAScript Language: Scripts and Modules","number":"2"},{"type":"clause","id":"sec-copyright-and-software-license","title":"Copyright & Software License","titleHTML":"Copyright &amp; Software License","number":"A"}]}`);
 ;let usesMultipage = false</script><style>body {
   display: flex;
   font-size: 18px;
@@ -1148,6 +1295,43 @@ a:visited {
 a:hover {
   text-decoration: underline;
   color: #239dee;
+}
+
+a.e-user-code,
+span.e-user-code {
+  white-space: nowrap;
+}
+
+a.e-user-code::before,
+span.e-user-code::before {
+  display: none;
+  color: brown;
+  background-color: white;
+  border: 2pt solid brown;
+  padding: 0.3ex;
+  margin: 0 0.25em 0 0;
+  line-height: 1;
+  vertical-align: text-top;
+  text-transform: uppercase;
+  font-family: 'Comic Code', sans-serif;
+  font-weight: 900;
+  font-size: x-small;
+}
+
+a.e-user-code:hover::before,
+span.e-user-code:hover::before {
+  background-color: brown;
+  color: white;
+}
+
+html.show-ao-annotations a.e-user-code::before,
+html.show-ao-annotations span.e-user-code::before {
+  display: inline-block;
+}
+
+a.e-user-code::before,
+span.e-user-code::before {
+  content: 'UC';
 }
 
 code {
@@ -2290,17 +2474,714 @@ li.menu-search-result-term:before {
 .clause-attributes-tag a {
   color: #884400;
 }
-</style></head><body><div id="menu-toggle">☰</div><div id="menu-spacer"></div><div id="menu"><div id="menu-search"><input type="text" id="menu-search-box" placeholder="Search..."><div id="menu-search-results" class="inactive"></div></div><div id="menu-pins"><div class="menu-pane-header">Pins</div><ul id="menu-pins-list"></ul></div><div class="menu-pane-header">Table of Contents</div><div id="menu-toc"><ol class="toc"><li><span class="item-toggle-none"></span><a href="#sec-demo-clause" title="This is an emu-clause"><span class="secnum">1</span> This is an emu-clause</a></li><li><span class="item-toggle-none"></span><a href="#sec-copyright-and-software-license" title="Copyright &amp; Software License"><span class="secnum">A</span> Copyright &amp; Software License</a></li></ol></div></div><div id="spec-container"><h1 class="version">Stage -1 Draft / December 17, 2021</h1><h1 class="title">Proposal Title Goes Here</h1>
 
-<emu-clause id="sec-demo-clause">
-  <h1><span class="secnum">1</span> This is an emu-clause</h1>
-  <p>This is an algorithm:</p>
-  <emu-alg><ol><li>Let <var>proposal</var> be <emu-val>undefined</emu-val>.</li><li>If IsAccepted(<var>proposal</var>),<ol><li>Let <var>stage</var> be <emu-val>0</emu-val>.</li></ol></li><li>Else,<ol><li>Let <var>stage</var> be <emu-val>-1</emu-val>.</li></ol></li><li>Return ?&nbsp;<emu-xref aoid="ToString" id="_ref_0"><a href="https://tc39.es/ecma262/#sec-tostring">ToString</a></emu-xref>(<var>proposal</var>).</li></ol></emu-alg>
+/* Shortcuts help dialog */
+
+#shortcuts-help {
+  position: fixed;
+  left: 5%;
+  margin: 0 auto;
+  right: 5%;
+  z-index: 10;
+  top: 10%;
+  top: calc(5vw + 5vh);
+  padding: 30px 90px;
+  max-width: 500px;
+  outline: solid 10000px rgba(255, 255, 255, 0.6);
+  border-radius: 5px;
+  border-width: 1px 1px 0 1px;
+  background-color: #ddd;
+  display: none;
+}
+
+#shortcuts-help.active {
+  display: block;
+}
+
+#shortcuts-help ul {
+  padding: 0;
+}
+
+#shortcuts-help li {
+  display: flex;
+  justify-content: space-between;
+}
+
+#shortcuts-help code {
+  padding: 3px 10px;
+  border-radius: 3px;
+  border-width: 1px 1px 0 1px;
+  border-color: #bbb;
+  background-color: #eee;
+  box-shadow: inset 0 -1px 0 #ccc;
+}
+</style></head><body><div id="shortcuts-help">
+<ul>
+  <li><span>Toggle shortcuts help</span><code>?</code></li>
+  <li><span>Toggle "can call user code" annotations</span><code>u</code></li>
+
+  <li><span>Jump to search box</span><code>/</code></li>
+</ul></div><div id="menu-toggle"><svg xmlns="http://www.w3.org/2000/svg" style="width:100%; height:100%; stroke:currentColor" viewBox="0 0 120 120">
+      <title>Menu</title>
+      <path stroke-width="10" stroke-linecap="round" d="M30,60 h60  M30,30 m0,5 h60  M30,90 m0,-5 h60"></path>
+    </svg></div><div id="menu-spacer"></div><div id="menu"><div id="menu-search"><input type="text" id="menu-search-box" placeholder="Search..."><div id="menu-search-results" class="inactive"></div></div><div id="menu-pins"><div class="menu-pane-header">Pins</div><ul id="menu-pins-list"></ul></div><div class="menu-pane-header">Table of Contents</div><div id="menu-toc"><ol class="toc"><li><span class="item-toggle">◢</span><a href="#sec-ecmascript-language-expressions" title="ECMAScript Language: Expressions"><span class="secnum">1</span> ECMAScript Language: Expressions</a><ol class="toc"><li><span class="item-toggle">◢</span><a href="#sec-import-calls" title="Import Calls"><span class="secnum">1.1</span> Import Calls</a><ol class="toc"><li><span class="item-toggle">◢</span><a href="#sec-import-call-runtime-semantics-evaluation" title="Runtime Semantics: Evaluation"><span class="secnum">1.1.1</span> RS: Evaluation</a><ol class="toc"><li><span class="item-toggle-none"></span><a href="#sec-evaluate-import-call" title="EvaluateImportCall ( specifierExpression , optionsExpression )"><span class="secnum">1.1.1.1</span> <ins>EvaluateImportCall ( <var>specifierExpression</var> , <var>optionsExpression</var> )</ins></a></li></ol></li></ol></li></ol></li><li><span class="item-toggle">◢</span><a href="#sec-ecmascript-language-scripts-and-modules" title="ECMAScript Language: Scripts and Modules"><span class="secnum">2</span> ECMAScript Language: Scripts and Modules</a><ol class="toc"><li><span class="item-toggle">◢</span><a href="#sec-modules" title="Modules"><span class="secnum">2.1</span> Modules</a><ol class="toc"><li><span class="item-toggle">◢</span><a href="#sec-module-semantics" title="Module Semantics"><span class="secnum">2.1.1</span> Module Semantics</a><ol class="toc"><li><span class="item-toggle-none"></span><a href="#sec-static-semantics-modulerequests" title="Static Semantics: ModuleRequests"><span class="secnum">2.1.1.1</span> SS: ModuleRequests</a></li><li><span class="item-toggle-none"></span><a href="#sec-cyclic-module-records" title="Cyclic Module Records"><span class="secnum">2.1.1.2</span> Cyclic Module Records</a></li><li><span class="item-toggle">◢</span><a href="#sec-source-text-module-records" title="Source Text Module Records"><span class="secnum">2.1.1.3</span> Source Text Module Records</a><ol class="toc"><li><span class="item-toggle-none"></span><a href="#sec-source-text-module-record-initialize-environment" title="InitializeEnvironment ( )"><span class="secnum">2.1.1.3.1</span> InitializeEnvironment ( )</a></li></ol></li><li><span class="item-toggle-none"></span><a href="#sec-hostresolvemodulereflection" title="
+          HostResolveModuleReflection (
+            referencingScriptOrModule: a Script Record, a Module Record, or null,
+            specifier: a ModuleSpecifier String,
+          ): either a normal completion containing an Object or a throw completion
+        "><span class="secnum">2.1.1.4</span> 
+          <ins>HostResolveModuleReflection (
+            <var>referencingScriptOrModule</var>: a Script Record, a Module Record, or <emu-val>null</emu-val>,
+            <var>specifier</var>: a <emu-nt>ModuleSpecifier</emu-nt> String,
+          ): either a normal completion containing an Object or a throw completion</ins>
+        </a></li><li><span class="item-toggle-none"></span><a href="#sec-hostimportmoduledynamically" title="
+          HostImportModuleDynamically (
+            referencingScriptOrModule: a Script Record, a Module Record, or null,
+            specifier: a ModuleSpecifier String,
+            reflection: none or module,
+            promiseCapability: a PromiseCapability Record,
+          ): unused
+        "><span class="secnum">2.1.1.5</span> 
+          HostImportModuleDynamically (
+            <var>referencingScriptOrModule</var>: a Script Record, a Module Record, or <emu-val>null</emu-val>,
+            <var>specifier</var>: a <emu-nt>ModuleSpecifier</emu-nt> String,
+            <ins><var>reflection</var>: <emu-const>none</emu-const> or <emu-const>module</emu-const>,</ins>
+            <var>promiseCapability</var>: a PromiseCapability Record,
+          ): <emu-const>unused</emu-const>
+        </a></li><li><span class="item-toggle-none"></span><a href="#sec-finishdynamicimport" title="
+          FinishDynamicImport (
+            referencingScriptOrModule: unknown,
+            specifier: unknown,
+            reflection: none or module ,
+            promiseCapability: a PromiseCapability Record,
+            innerPromise: unknown,
+          ): unused
+        "><span class="secnum">2.1.1.6</span> 
+          FinishDynamicImport (
+            <var>referencingScriptOrModule</var>: unknown,
+            <var>specifier</var>: unknown,
+            <ins><var>reflection</var>: <emu-const>none</emu-const> or <emu-const>module</emu-const> ,</ins>
+            <var>promiseCapability</var>: a PromiseCapability Record,
+            <var>innerPromise</var>: unknown,
+          ): <emu-const>unused</emu-const>
+        </a></li></ol></li></ol></li><li><span class="item-toggle">◢</span><a href="#sec-imports" title="Imports"><span class="secnum">2.2</span> Imports</a><ol class="toc"><li><span class="item-toggle-none"></span><a href="#sec-static-semantics-importentries" title="Static Semantics: ImportEntries ( )"><span class="secnum">2.2.1</span> SS: ImportEntries ( )</a></li></ol></li></ol></li><li><span class="item-toggle-none"></span><a href="#sec-copyright-and-software-license" title="Copyright &amp; Software License"><span class="secnum">A</span> Copyright &amp; Software License</a></li></ol></div></div><div id="spec-container"><h1 class="version">Stage 1 Draft / July 7, 2022</h1><h1 class="title">Import Reflection</h1>
+
+<emu-clause id="sec-ecmascript-language-expressions">
+  <h1><span class="secnum">1</span> ECMAScript Language: Expressions</h1>
+
+  <emu-clause id="sec-import-calls">
+    <h1><span class="secnum">1.1</span> Import Calls</h1>
+
+    <emu-clause id="sec-import-call-runtime-semantics-evaluation" type="sdo">
+      <h1><span class="secnum">1.1.1</span> Runtime Semantics: Evaluation</h1>
+
+      <emu-clause id="sec-evaluate-import-call">
+        <h1><span class="secnum">1.1.1.1</span> <ins>EvaluateImportCall ( <var>specifierExpression</var> , <var>optionsExpression</var> )</ins></h1>
+        <emu-alg><ol><li>Let <var>referencingScriptOrModule</var> be <emu-xref aoid="GetActiveScriptOrModule"><a href="https://tc39.es/ecma262/#sec-getactivescriptormodule">GetActiveScriptOrModule</a></emu-xref>().</li><li>Let <var>argRef</var> be the result of evaluating <var>specifierExpression</var>.</li><li>Let <var>specifier</var> be ?&nbsp;<emu-xref aoid="GetValue"><a href="https://tc39.es/ecma262/#sec-getvalue">GetValue</a></emu-xref>(<var>argRef</var>).</li><li>Let <var>optionsRef</var> be the result of evaluating <var>optionsExpression</var>.</li><li>Let <var>options</var> be ?&nbsp;<emu-xref aoid="GetValue"><a href="https://tc39.es/ecma262/#sec-getvalue">GetValue</a></emu-xref>(<var>optionsRef</var>).</li><li>Let <var>promiseCapability</var> be !&nbsp;<emu-xref aoid="NewPromiseCapability"><a href="https://tc39.es/ecma262/#sec-newpromisecapability">NewPromiseCapability</a></emu-xref>(<emu-xref href="#sec-promise-constructor"><a href="https://tc39.es/ecma262/#sec-promise-constructor">%Promise%</a></emu-xref>).</li><li>Let <var>specifierString</var> be <emu-xref aoid="Completion"><a href="https://tc39.es/ecma262/#sec-completion-ao">Completion</a></emu-xref>(<emu-xref aoid="ToString"><a href="https://tc39.es/ecma262/#sec-tostring">ToString</a></emu-xref>(<var>specifier</var>)).</li><li><emu-xref aoid="IfAbruptRejectPromise"><a href="https://tc39.es/ecma262/#sec-ifabruptrejectpromise">IfAbruptRejectPromise</a></emu-xref>(<var>specifierString</var>, <var>promiseCapability</var>).</li><li>Let <var>reflection</var> be <emu-const>none</emu-const>.</li><li>If <var>options</var> is not <emu-val>undefined</emu-val>, then<ol><li>If <emu-xref aoid="Type"><a href="https://tc39.es/ecma262/#sec-ecmascript-data-types-and-values">Type</a></emu-xref>(<var>options</var>) is not Object,<ol><li>Perform !&nbsp;<emu-xref aoid="Call"><a href="https://tc39.es/ecma262/#sec-call">Call</a></emu-xref>(<var>promiseCapability</var>.[[Reject]], <emu-val>undefined</emu-val>, « a newly created <emu-val>TypeError</emu-val> object »).</li><li>Return <var>promiseCapability</var>.[[Promise]].</li></ol></li><li>Let <var>reflection</var> be <emu-xref aoid="Get"><a href="https://tc39.es/ecma262/#sec-get-o-p">Get</a></emu-xref>(<var>options</var>, <emu-val>"reflect"</emu-val>).</li><li><emu-xref aoid="IfAbruptRejectPromise"><a href="https://tc39.es/ecma262/#sec-ifabruptrejectpromise">IfAbruptRejectPromise</a></emu-xref>(<var>reflection</var>, <var>promiseCapability</var>).</li><li>If <var>reflection</var> is not <emu-val>undefined</emu-val>,<ol><li>If _reflection is not <code>"module"</code>, then<ol><li>Perform !&nbsp;<emu-xref aoid="Call"><a href="https://tc39.es/ecma262/#sec-call">Call</a></emu-xref>(<var>promiseCapability</var>.[[Reject]], <emu-val>undefined</emu-val>, « a newly created <emu-val>TypeError</emu-val> object »).</li><li>Return <var>promiseCapability</var>.[[Promise]].</li></ol></li></ol></li></ol></li><li>Perform <emu-xref aoid="HostImportModuleDynamically"><a href="https://tc39.es/ecma262/#sec-hostimportmoduledynamically">HostImportModuleDynamically</a></emu-xref>(<var>referencingScriptOrModule</var>, <var>specifierString</var>, <var>reflection</var>, <var>promiseCapability</var>).</li><li>Return <var>promiseCapability</var>.[[Promise]].</li></ol></emu-alg>
+      </emu-clause>
+
+      <emu-grammar><emu-production name="ImportCall" collapsed="">
+    <emu-nt><a href="https://tc39.es/ecma262/#prod-ImportCall">ImportCall</a></emu-nt> <emu-geq>:</emu-geq> <emu-rhs a="jskt5mpw">
+        <emu-t>import</emu-t>
+        <emu-t>(</emu-t>
+        <emu-nt><a href="https://tc39.es/ecma262/#prod-AssignmentExpression">AssignmentExpression</a></emu-nt>
+        <emu-t>)</emu-t>
+    </emu-rhs>
+</emu-production>
+</emu-grammar>
+      <emu-alg><ol><li><del>Let <var>referencingScriptOrModule</var> be <emu-xref aoid="GetActiveScriptOrModule"><a href="https://tc39.es/ecma262/#sec-getactivescriptormodule">GetActiveScriptOrModule</a></emu-xref>().</del></li><li><del>Let <var>argRef</var> be the result of evaluating <emu-nt><a href="https://tc39.es/ecma262/#prod-AssignmentExpression">AssignmentExpression</a></emu-nt>.</del></li><li><del>Let <var>specifier</var> be ?&nbsp;<emu-xref aoid="GetValue"><a href="https://tc39.es/ecma262/#sec-getvalue">GetValue</a></emu-xref>(<var>argRef</var>).</del></li><li><del>Let <var>promiseCapability</var> be !&nbsp;<emu-xref aoid="NewPromiseCapability"><a href="https://tc39.es/ecma262/#sec-newpromisecapability">NewPromiseCapability</a></emu-xref>(<emu-xref href="#sec-promise-constructor"><a href="https://tc39.es/ecma262/#sec-promise-constructor">%Promise%</a></emu-xref>).</del></li><li><del>Let <var>specifierString</var> be <emu-xref aoid="Completion"><a href="https://tc39.es/ecma262/#sec-completion-ao">Completion</a></emu-xref>(<emu-xref aoid="ToString"><a href="https://tc39.es/ecma262/#sec-tostring">ToString</a></emu-xref>(<var>specifier</var>)).</del></li><li><del><emu-xref aoid="IfAbruptRejectPromise"><a href="https://tc39.es/ecma262/#sec-ifabruptrejectpromise">IfAbruptRejectPromise</a></emu-xref>(<var>specifierString</var>, <var>promiseCapability</var>).</del></li><li><del>Perform <emu-xref aoid="HostImportModuleDynamically"><a href="https://tc39.es/ecma262/#sec-hostimportmoduledynamically">HostImportModuleDynamically</a></emu-xref>(<var>referencingScriptOrModule</var>, <var>specifierString</var>, <var>promiseCapability</var>).</del></li><li><del>Return <var>promiseCapability</var>.[[Promise]].</del></li><li><ins>Return ?&nbsp;EvaluateImportCall(<emu-nt><a href="https://tc39.es/ecma262/#prod-AssignmentExpression">AssignmentExpression</a></emu-nt>, <emu-val>undefined</emu-val>).</ins></li></ol></emu-alg>
+
+      <emu-grammar><ins><emu-production name="ImportCall" collapsed="">
+    <emu-nt><a href="https://tc39.es/ecma262/#prod-ImportCall">ImportCall</a></emu-nt> <emu-geq>:</emu-geq> <emu-rhs a="qah14ksp">
+        <emu-t>import</emu-t>
+        <emu-t>(</emu-t>
+        <emu-nt><a href="https://tc39.es/ecma262/#prod-AssignmentExpression">AssignmentExpression</a></emu-nt>
+        <emu-t>,</emu-t>
+        <emu-nt><a href="https://tc39.es/ecma262/#prod-AssignmentExpression">AssignmentExpression</a></emu-nt>
+        <emu-t>)</emu-t>
+    </emu-rhs>
+</emu-production></ins>
+</emu-grammar>
+      <emu-alg><ol><li><ins>Return ?&nbsp;EvaluateImportCall(the first <emu-nt><a href="https://tc39.es/ecma262/#prod-AssignmentExpression">AssignmentExpression</a></emu-nt>, the second <emu-nt><a href="https://tc39.es/ecma262/#prod-AssignmentExpression">AssignmentExpression</a></emu-nt>).</ins></li></ol></emu-alg>
+    </emu-clause>
+  </emu-clause>
+</emu-clause>
+
+<emu-clause id="sec-ecmascript-language-scripts-and-modules">
+  <h1><span class="secnum">2</span> ECMAScript Language: Scripts and Modules</h1>
+  
+  <emu-clause id="sec-modules">
+    <h1><span class="secnum">2.1</span> Modules</h1>
+
+    <emu-clause id="sec-module-semantics">
+      <h1><span class="secnum">2.1.1</span> Module Semantics</h1>
+
+      <emu-clause id="sec-static-semantics-modulerequests" oldids="sec-module-semantics-static-semantics-modulerequests,sec-imports-static-semantics-modulerequests,sec-exports-static-semantics-modulerequests" type="sdo" aoid="ModuleRequests"><span id="sec-exports-static-semantics-modulerequests"></span><span id="sec-imports-static-semantics-modulerequests"></span><span id="sec-module-semantics-static-semantics-modulerequests"></span>
+        <h1><span class="secnum">2.1.1.1</span> Static Semantics: ModuleRequests</h1>
+        <p>The <emu-xref href="#sec-algorithm-conventions-syntax-directed-operations"><a href="https://tc39.es/ecma262/#sec-algorithm-conventions-syntax-directed-operations">syntax-directed operation</a></emu-xref> ModuleRequests takes no arguments and returns a <emu-xref href="#sec-list-and-record-specification-type"><a href="https://tc39.es/ecma262/#sec-list-and-record-specification-type">List</a></emu-xref> of Strings. It is defined piecewise over the following productions:</p>
+        <emu-grammar><emu-production name="Module" collapsed="">
+    <emu-nt><a href="https://tc39.es/ecma262/#prod-Module">Module</a></emu-nt> <emu-geq>:</emu-geq> <emu-rhs a="n7nathbb"><emu-gann>[empty]</emu-gann></emu-rhs>
+</emu-production>
+</emu-grammar>
+        <emu-alg><ol><li>Return a new empty <emu-xref href="#sec-list-and-record-specification-type"><a href="https://tc39.es/ecma262/#sec-list-and-record-specification-type">List</a></emu-xref>.</li></ol></emu-alg>
+        <emu-grammar><emu-production name="ModuleItemList" collapsed="">
+    <emu-nt><a href="https://tc39.es/ecma262/#prod-ModuleItemList">ModuleItemList</a></emu-nt> <emu-geq>:</emu-geq> <emu-rhs a="ap7dhqxm"><emu-nt><a href="https://tc39.es/ecma262/#prod-ModuleItem">ModuleItem</a></emu-nt></emu-rhs>
+</emu-production>
+</emu-grammar>
+        <emu-alg><ol><li>Return <emu-xref aoid="ModuleRequests" id="_ref_5"><a href="#sec-static-semantics-modulerequests">ModuleRequests</a></emu-xref> of <emu-nt><a href="https://tc39.es/ecma262/#prod-ModuleItem">ModuleItem</a></emu-nt>.</li></ol></emu-alg>
+        <emu-grammar><emu-production name="ModuleItemList" collapsed="">
+    <emu-nt><a href="https://tc39.es/ecma262/#prod-ModuleItemList">ModuleItemList</a></emu-nt> <emu-geq>:</emu-geq> <emu-rhs a="dd23jrxs">
+        <emu-nt><a href="https://tc39.es/ecma262/#prod-ModuleItemList">ModuleItemList</a></emu-nt>
+        <emu-nt><a href="https://tc39.es/ecma262/#prod-ModuleItem">ModuleItem</a></emu-nt>
+    </emu-rhs>
+</emu-production>
+</emu-grammar>
+        <emu-alg><ol><li>Let <var>moduleNames</var> be <emu-xref aoid="ModuleRequests" id="_ref_6"><a href="#sec-static-semantics-modulerequests">ModuleRequests</a></emu-xref> of <emu-nt><a href="https://tc39.es/ecma262/#prod-ModuleItemList">ModuleItemList</a></emu-nt>.</li><li>Let <var>additionalNames</var> be <emu-xref aoid="ModuleRequests" id="_ref_7"><a href="#sec-static-semantics-modulerequests">ModuleRequests</a></emu-xref> of <emu-nt><a href="https://tc39.es/ecma262/#prod-ModuleItem">ModuleItem</a></emu-nt>.</li><li>Append to <var>moduleNames</var> each element of <var>additionalNames</var> that is not already an element of <var>moduleNames</var>.</li><li>Return <var>moduleNames</var>.</li></ol></emu-alg>
+        <emu-grammar><emu-production name="ModuleItem" collapsed="">
+    <emu-nt><a href="https://tc39.es/ecma262/#prod-ModuleItem">ModuleItem</a></emu-nt> <emu-geq>:</emu-geq> <emu-rhs a="15hryu6r"><emu-nt><a href="https://tc39.es/ecma262/#prod-StatementListItem">StatementListItem</a></emu-nt></emu-rhs>
+</emu-production>
+</emu-grammar>
+        <emu-alg><ol><li>Return a new empty <emu-xref href="#sec-list-and-record-specification-type"><a href="https://tc39.es/ecma262/#sec-list-and-record-specification-type">List</a></emu-xref>.</li></ol></emu-alg>
+        <emu-grammar><emu-production name="ImportDeclaration" collapsed="">
+    <emu-nt><a href="#prod-ImportDeclaration">ImportDeclaration</a></emu-nt> <emu-geq>:</emu-geq> <emu-rhs a="glhuxxec" id="prod-Fii3Jv-w">
+        <emu-t>import</emu-t>
+        <emu-nt id="_ref_24"><a href="#prod-ImportClause">ImportClause</a></emu-nt>
+        <emu-nt id="_ref_25"><a href="#prod-FromClause">FromClause</a></emu-nt>
+        <emu-t>;</emu-t>
+    </emu-rhs>
+</emu-production>
+</emu-grammar>
+        <emu-alg><ol><li>Return <emu-xref aoid="ModuleRequests" id="_ref_8"><a href="#sec-static-semantics-modulerequests">ModuleRequests</a></emu-xref> of <emu-nt id="_ref_26"><a href="#prod-FromClause">FromClause</a></emu-nt>.</li></ol></emu-alg>
+        <emu-grammar><ins><emu-production name="ImportDeclaration" collapsed="">
+    <emu-nt><a href="#prod-ImportDeclaration">ImportDeclaration</a></emu-nt> <emu-geq>:</emu-geq> <emu-rhs a="vwe703cw" id="prod-1z-7quqL">
+        <emu-t>import</emu-t>
+        <emu-t>module</emu-t>
+        <emu-nt id="_ref_27"><a href="#prod-ImportedBinding">ImportedBinding</a></emu-nt>
+        <emu-nt id="_ref_28"><a href="#prod-FromClause">FromClause</a></emu-nt>
+        <emu-t>;</emu-t>
+    </emu-rhs>
+</emu-production></ins>
+</emu-grammar>
+        <emu-alg><ol><li><ins>Return a new empty <emu-xref href="#sec-list-and-record-specification-type"><a href="https://tc39.es/ecma262/#sec-list-and-record-specification-type">List</a></emu-xref>.</ins></li></ol></emu-alg>
+        <emu-grammar><emu-production name="ModuleSpecifier" collapsed="">
+    <emu-nt><a href="#prod-ModuleSpecifier">ModuleSpecifier</a></emu-nt> <emu-geq>:</emu-geq> <emu-rhs a="xhtltz00" id="prod-geKEXfWi"><emu-nt><a href="https://tc39.es/ecma262/#prod-StringLiteral">StringLiteral</a></emu-nt></emu-rhs>
+</emu-production>
+</emu-grammar>
+        <emu-alg><ol><li>Return a <emu-xref href="#sec-list-and-record-specification-type"><a href="https://tc39.es/ecma262/#sec-list-and-record-specification-type">List</a></emu-xref> whose sole element is the <emu-xref aoid="SV"><a href="https://tc39.es/ecma262/#sec-static-semantics-sv">SV</a></emu-xref> of <emu-nt><a href="https://tc39.es/ecma262/#prod-StringLiteral">StringLiteral</a></emu-nt>.</li></ol></emu-alg>
+        <emu-grammar><emu-production name="ExportDeclaration" collapsed="">
+    <emu-nt><a href="https://tc39.es/ecma262/#prod-ExportDeclaration">ExportDeclaration</a></emu-nt> <emu-geq>:</emu-geq> <emu-rhs a="4kqfdugp">
+        <emu-t>export</emu-t>
+        <emu-nt><a href="https://tc39.es/ecma262/#prod-ExportFromClause">ExportFromClause</a></emu-nt>
+        <emu-nt id="_ref_29"><a href="#prod-FromClause">FromClause</a></emu-nt>
+        <emu-t>;</emu-t>
+    </emu-rhs>
+</emu-production>
+</emu-grammar>
+        <emu-alg><ol><li>Return the <emu-xref aoid="ModuleRequests" id="_ref_9"><a href="#sec-static-semantics-modulerequests">ModuleRequests</a></emu-xref> of <emu-nt id="_ref_30"><a href="#prod-FromClause">FromClause</a></emu-nt>.</li></ol></emu-alg>
+        <emu-grammar><emu-production name="ExportDeclaration">
+    <emu-nt><a href="https://tc39.es/ecma262/#prod-ExportDeclaration">ExportDeclaration</a></emu-nt> <emu-geq>:</emu-geq> <emu-rhs a="j2lh_kda">
+        <emu-t>export</emu-t>
+        <emu-nt><a href="https://tc39.es/ecma262/#prod-NamedExports">NamedExports</a></emu-nt>
+        <emu-t>;</emu-t>
+    </emu-rhs>
+    <emu-rhs a="bg3oaw2m">
+        <emu-t>export</emu-t>
+        <emu-nt><a href="https://tc39.es/ecma262/#prod-VariableStatement">VariableStatement</a></emu-nt>
+    </emu-rhs>
+    <emu-rhs a="go9a4xdq">
+        <emu-t>export</emu-t>
+        <emu-nt><a href="https://tc39.es/ecma262/#prod-Declaration">Declaration</a></emu-nt>
+    </emu-rhs>
+    <emu-rhs a="cdfbfvfu">
+        <emu-t>export</emu-t>
+        <emu-t>default</emu-t>
+        <emu-nt><a href="https://tc39.es/ecma262/#prod-HoistableDeclaration">HoistableDeclaration</a></emu-nt>
+    </emu-rhs>
+    <emu-rhs a="w8pljwgc">
+        <emu-t>export</emu-t>
+        <emu-t>default</emu-t>
+        <emu-nt><a href="https://tc39.es/ecma262/#prod-ClassDeclaration">ClassDeclaration</a></emu-nt>
+    </emu-rhs>
+    <emu-rhs a="4f6ct71n">
+        <emu-t>export</emu-t>
+        <emu-t>default</emu-t>
+        <emu-nt><a href="https://tc39.es/ecma262/#prod-AssignmentExpression">AssignmentExpression</a></emu-nt>
+        <emu-t>;</emu-t>
+    </emu-rhs>
+</emu-production>
+</emu-grammar>
+        <emu-alg><ol><li>Return a new empty <emu-xref href="#sec-list-and-record-specification-type"><a href="https://tc39.es/ecma262/#sec-list-and-record-specification-type">List</a></emu-xref>.</li></ol></emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-cyclic-module-records">
+        <h1><span class="secnum">2.1.1.2</span> Cyclic Module Records</h1>
+
+        <p>A <dfn id="cyclic-module-record" variants="Cyclic Module Records">Cyclic Module Record</dfn> is used to represent information about a module that can participate in dependency cycles with other modules that are subclasses of the <emu-xref href="#cyclic-module-record" id="_ref_10"><a href="#cyclic-module-record">Cyclic Module Record</a></emu-xref> type. <emu-xref href="#sec-abstract-module-records"><a href="https://tc39.es/ecma262/#sec-abstract-module-records">Module Records</a></emu-xref> that are not subclasses of the <emu-xref href="#cyclic-module-record" id="_ref_11"><a href="#cyclic-module-record">Cyclic Module Record</a></emu-xref> type must not participate in dependency cycles with <emu-xref href="#sourctextmodule-record"><a href="https://tc39.es/ecma262/#sourctextmodule-record">Source Text Module Records</a></emu-xref>.</p>
+        <p>In addition to the fields defined in <emu-xref href="#table-module-record-fields"><a href="https://tc39.es/ecma262/#table-module-record-fields">Table 44</a></emu-xref> <emu-xref href="#cyclic-module-record" id="_ref_12"><a href="#cyclic-module-record">Cyclic Module Records</a></emu-xref> have the additional fields listed in <emu-xref href="#table-cyclic-module-fields" id="_ref_0"><a href="#table-cyclic-module-fields">Table 1</a></emu-xref></p>
+        <emu-table id="table-cyclic-module-fields" caption="Additional Fields of Cyclic Module Records"><figure><figcaption>Table 1: Additional Fields of <emu-xref href="#cyclic-module-record" id="_ref_13"><a href="#cyclic-module-record">Cyclic Module Records</a></emu-xref></figcaption>
+          <table>
+            <tbody><tr>
+              <th>
+                Field Name
+              </th>
+              <th>
+                Value Type
+              </th>
+              <th>
+                Meaning
+              </th>
+            </tr>
+            <tr>
+              <td>
+                [[Status]]
+              </td>
+              <td>
+                <emu-const>unlinked</emu-const>, <emu-const>linking</emu-const>, <emu-const>linked</emu-const>, <emu-const>evaluating</emu-const>, <emu-const>evaluating-async</emu-const>, or <emu-const>evaluated</emu-const>
+              </td>
+              <td>
+                Initially <emu-const>unlinked</emu-const>. Transitions to <emu-const>linking</emu-const>, <emu-const>linked</emu-const>, <emu-const>evaluating</emu-const>, possibly <emu-const>evaluating-async</emu-const>, <emu-const>evaluated</emu-const> (in that order) as the module progresses throughout its lifecycle. <emu-const>evaluating-async</emu-const> indicates this module is queued to execute on completion of its asynchronous dependencies or it is a module whose [[HasTLA]] field is <emu-val>true</emu-val> that has been executed and is pending top-level completion.
+              </td>
+            </tr>
+            <tr>
+              <td>
+                [[EvaluationError]]
+              </td>
+              <td>
+                a <emu-xref href="#sec-completion-record-specification-type"><a href="https://tc39.es/ecma262/#sec-completion-record-specification-type">throw completion</a></emu-xref> or <emu-const>empty</emu-const>
+              </td>
+              <td>
+                A <emu-xref href="#sec-completion-record-specification-type"><a href="https://tc39.es/ecma262/#sec-completion-record-specification-type">throw completion</a></emu-xref> representing the exception that occurred during evaluation. <emu-val>undefined</emu-val> if no exception occurred or if [[Status]] is not <emu-const>evaluated</emu-const>.
+              </td>
+            </tr>
+            <tr>
+              <td>
+                [[DFSIndex]]
+              </td>
+              <td>
+                an <emu-xref href="#integer"><a href="https://tc39.es/ecma262/#integer">integer</a></emu-xref> or <emu-const>empty</emu-const>
+              </td>
+              <td>
+                Auxiliary field used during Link and Evaluate only. If [[Status]] is <emu-const>linking</emu-const> or <emu-const>evaluating</emu-const>, this non-negative number records the point at which the module was first visited during the depth-first traversal of the dependency graph.
+              </td>
+            </tr>
+            <tr>
+              <td>
+                [[DFSAncestorIndex]]
+              </td>
+              <td>
+                an <emu-xref href="#integer"><a href="https://tc39.es/ecma262/#integer">integer</a></emu-xref> or <emu-const>empty</emu-const>
+              </td>
+              <td>
+                Auxiliary field used during Link and Evaluate only. If [[Status]] is <emu-const>linking</emu-const> or <emu-const>evaluating</emu-const>, this is either the module's own [[DFSIndex]] or that of an "earlier" module in the same strongly connected component.
+              </td>
+            </tr>
+            <tr>
+              <td>
+                [[RequestedModules]]
+              </td>
+              <td>
+                a <emu-xref href="#sec-list-and-record-specification-type"><a href="https://tc39.es/ecma262/#sec-list-and-record-specification-type">List</a></emu-xref> of Strings
+              </td>
+              <td>
+                A <emu-xref href="#sec-list-and-record-specification-type"><a href="https://tc39.es/ecma262/#sec-list-and-record-specification-type">List</a></emu-xref> of all the <emu-nt id="_ref_31"><a href="#prod-ModuleSpecifier">ModuleSpecifier</a></emu-nt> strings<ins>, excluding module reflection <emu-nt id="_ref_32"><a href="#prod-ModuleSpecifier">ModuleSpecifier</a></emu-nt> strings,</ins> used by the module represented by this record to request the importation of a module. The <emu-xref href="#sec-list-and-record-specification-type"><a href="https://tc39.es/ecma262/#sec-list-and-record-specification-type">List</a></emu-xref> is source text occurrence ordered.
+              </td>
+            </tr>
+            <tr>
+              <td>
+                [[CycleRoot]]
+              </td>
+              <td>
+                a <emu-xref href="#cyclic-module-record" id="_ref_14"><a href="#cyclic-module-record">Cyclic Module Record</a></emu-xref> or <emu-const>empty</emu-const>
+              </td>
+              <td>
+                The first visited module of the cycle, the root DFS ancestor of the strongly connected component. For a module not in a cycle this would be the module itself. Once Evaluate has completed, a module's [[DFSAncestorIndex]] is equal to the [[DFSIndex]] of its [[CycleRoot]].
+              </td>
+            </tr>
+            <tr>
+              <td>
+                [[HasTLA]]
+              </td>
+              <td>
+                a Boolean
+              </td>
+              <td>
+                Whether this module is individually asynchronous (for example, if it's a <emu-xref href="#sourctextmodule-record"><a href="https://tc39.es/ecma262/#sourctextmodule-record">Source Text Module Record</a></emu-xref> containing a top-level await). Having an asynchronous dependency does not mean this field is <emu-val>true</emu-val>. This field must not change after the module is parsed.
+              </td>
+            </tr>
+            <tr>
+              <td>
+                [[AsyncEvaluation]]
+              </td>
+              <td>
+                a Boolean
+              </td>
+              <td>
+                Whether this module is either itself asynchronous or has an asynchronous dependency. Note: The order in which this field is set is used to order queued executions, see <emu-xref href="#sec-async-module-execution-fulfilled"><a href="https://tc39.es/ecma262/#sec-async-module-execution-fulfilled">16.2.1.5.2.4</a></emu-xref>.
+              </td>
+            </tr>
+            <tr>
+              <td>
+                [[TopLevelCapability]]
+              </td>
+              <td>
+                a <emu-xref href="#sec-promisecapability-records"><a href="https://tc39.es/ecma262/#sec-promisecapability-records">PromiseCapability Record</a></emu-xref> or <emu-const>empty</emu-const>
+              </td>
+              <td>
+                If this module is the [[CycleRoot]] of some cycle, and Evaluate() was called on some module in that cycle, this field contains the <emu-xref href="#sec-promisecapability-records"><a href="https://tc39.es/ecma262/#sec-promisecapability-records">PromiseCapability Record</a></emu-xref> for that entire evaluation. It is used to settle the Promise object that is returned from the Evaluate() abstract method. This field will be <emu-const>empty</emu-const> for any dependencies of that module, unless a top-level Evaluate() has been initiated for some of those dependencies.
+              </td>
+            </tr>
+            <tr>
+              <td>
+                [[AsyncParentModules]]
+              </td>
+              <td>
+                a <emu-xref href="#sec-list-and-record-specification-type"><a href="https://tc39.es/ecma262/#sec-list-and-record-specification-type">List</a></emu-xref> of <emu-xref href="#cyclic-module-record" id="_ref_15"><a href="#cyclic-module-record">Cyclic Module Records</a></emu-xref>
+              </td>
+              <td>
+                If this module or a dependency has [[HasTLA]] <emu-val>true</emu-val>, and execution is in progress, this tracks the parent importers of this module for the top-level execution job. These parent modules will not start executing before this module has successfully completed execution.
+              </td>
+            </tr>
+            <tr>
+              <td>
+                [[PendingAsyncDependencies]]
+              </td>
+              <td>
+                an <emu-xref href="#integer"><a href="https://tc39.es/ecma262/#integer">integer</a></emu-xref> or <emu-const>empty</emu-const>
+              </td>
+              <td>
+                If this module has any asynchronous dependencies, this tracks the number of asynchronous dependency modules remaining to execute for this module. A module with asynchronous dependencies will be executed when this field reaches 0 and there are no execution errors.
+              </td>
+            </tr>
+          </tbody></table>
+        </figure></emu-table>
+      </emu-clause>
+
+      <emu-clause id="sec-source-text-module-records">
+        <h1><span class="secnum">2.1.1.3</span> Source Text Module Records</h1>
+
+        <p>An <dfn id="importentry-record" variants="ImportEntry Records">ImportEntry Record</dfn> is a <emu-xref href="#sec-list-and-record-specification-type"><a href="https://tc39.es/ecma262/#sec-list-and-record-specification-type">Record</a></emu-xref> that digests information about a single declarative import. Each <emu-xref href="#importentry-record" id="_ref_16"><a href="#importentry-record">ImportEntry Record</a></emu-xref> has the fields defined in <emu-xref href="#table-importentry-record-fields" id="_ref_1"><a href="#table-importentry-record-fields">Table 2</a></emu-xref>:</p>
+        <emu-table id="table-importentry-record-fields" caption="ImportEntry Record Fields" oldids="table-39"><figure><figcaption>Table 2: <emu-xref href="#importentry-record" id="_ref_17"><a href="#importentry-record">ImportEntry Record</a></emu-xref> Fields</figcaption><span id="table-39"></span>
+          <table>
+            <tbody><tr>
+              <th>
+                Field Name
+              </th>
+              <th>
+                Value Type
+              </th>
+              <th>
+                Meaning
+              </th>
+            </tr>
+            <tr>
+              <td>
+                [[ModuleRequest]]
+              </td>
+              <td>
+                a String
+              </td>
+              <td>
+                String value of the <emu-nt id="_ref_33"><a href="#prod-ModuleSpecifier">ModuleSpecifier</a></emu-nt> of the <emu-nt id="_ref_34"><a href="#prod-ImportDeclaration">ImportDeclaration</a></emu-nt>.
+              </td>
+            </tr>
+            <tr>
+              <td>
+                [[ImportName]]
+              </td>
+              <td>
+                a String or <emu-const>namespace-object</emu-const><ins> or <emu-const>module</emu-const></ins>
+              </td>
+              <td>
+                The name under which the desired binding is exported by the module identified by [[ModuleRequest]]. The value <emu-const>namespace-object</emu-const> indicates that the import request is for the target module's namespace object. <ins>The value <emu-const>module</emu-const> indicates that the import request is for a module import reflection.</ins>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                [[LocalName]]
+              </td>
+              <td>
+                a String
+              </td>
+              <td>
+                The name that is used to locally access the imported value from within the importing module.
+              </td>
+            </tr>
+          </tbody></table>
+        </figure></emu-table>
+
+        <emu-clause id="sec-source-text-module-record-initialize-environment" type="concrete method">
+          <h1><span class="secnum">2.1.1.3.1</span> InitializeEnvironment ( )</h1>
+          <p>The InitializeEnvironment concrete method of a <emu-xref href="#sourctextmodule-record"><a href="https://tc39.es/ecma262/#sourctextmodule-record">Source Text Module Record</a></emu-xref> <var>module</var> takes no arguments and returns either a <emu-xref href="#sec-completion-record-specification-type"><a href="https://tc39.es/ecma262/#sec-completion-record-specification-type">normal completion containing</a></emu-xref> <emu-const>unused</emu-const> or a <emu-xref href="#sec-completion-record-specification-type"><a href="https://tc39.es/ecma262/#sec-completion-record-specification-type">throw completion</a></emu-xref>. It performs the following steps when called:</p>
+
+          <emu-alg><ol><li>For each <emu-xref href="#exportentry-record"><a href="https://tc39.es/ecma262/#exportentry-record">ExportEntry Record</a></emu-xref> <var>e</var> of <var>module</var>.[[IndirectExportEntries]], do<ol><li>Let <var>resolution</var> be ?&nbsp;<var>module</var>.ResolveExport(<var>e</var>.[[ExportName]]).</li><li>If <var>resolution</var> is <emu-val>null</emu-val> or <emu-const>ambiguous</emu-const>, throw a <emu-val>SyntaxError</emu-val> exception.</li><li><emu-xref href="#assert"><a href="https://tc39.es/ecma262/#assert">Assert</a></emu-xref>: <var>resolution</var> is a <emu-xref href="#resolvedbinding-record"><a href="https://tc39.es/ecma262/#resolvedbinding-record">ResolvedBinding Record</a></emu-xref>.</li></ol></li><li><emu-xref href="#assert"><a href="https://tc39.es/ecma262/#assert">Assert</a></emu-xref>: All named exports from <var>module</var> are resolvable.</li><li>Let <var>realm</var> be <var>module</var>.[[Realm]].</li><li><emu-xref href="#assert"><a href="https://tc39.es/ecma262/#assert">Assert</a></emu-xref>: <var>realm</var> is not <emu-val>undefined</emu-val>.</li><li>Let <var>env</var> be <emu-xref aoid="NewModuleEnvironment"><a href="https://tc39.es/ecma262/#sec-newmoduleenvironment">NewModuleEnvironment</a></emu-xref>(<var>realm</var>.[[GlobalEnv]]).</li><li>Set <var>module</var>.[[Environment]] to <var>env</var>.</li><li>For each <emu-xref href="#importentry-record" id="_ref_18"><a href="#importentry-record">ImportEntry Record</a></emu-xref> <var>in</var> of <var>module</var>.[[ImportEntries]], do<ol><li><del>Let <var>importedModule</var> be !&nbsp;<emu-xref aoid="HostResolveImportedModule"><a href="https://tc39.es/ecma262/#sec-hostresolveimportedmodule">HostResolveImportedModule</a></emu-xref>(<var>module</var>, <var>in</var>.[[ModuleRequest]]).</del></li><li><del>NOTE: The above call cannot fail because imported module requests are a subset of <var>module</var>.[[RequestedModules]], and these have been resolved earlier in this algorithm.</del></li><li><ins> If <var>in</var>.[[ImportName]] is <emu-const>module</emu-const>, then<ol><li><ins>Let <var>reflectionObj</var> be ?&nbsp;HostResolveModuleReflection(<var>module</var>, <var>in</var>.[[ModuleRequest]]).</ins></li><li><ins>Perform !&nbsp;<var>env</var>.CreateImmutableBinding(<var>in</var>.[[LocalName]], <emu-val>true</emu-val>).</ins></li><li><ins>Perform !&nbsp;<var>env</var>.InitializeBinding(<var>in</var>.[[LocalName]], <var>reflectionObj</var>).</ins></li></ol></ins></li><li>If <var>in</var>.[[ImportName]] is <emu-const>namespace-object</emu-const>, then<ol><li><ins>Let <var>importedModule</var> be !&nbsp;<emu-xref aoid="HostResolveImportedModule"><a href="https://tc39.es/ecma262/#sec-hostresolveimportedmodule">HostResolveImportedModule</a></emu-xref>(<var>module</var>, <var>in</var>.[[ModuleRequest]]).</ins></li><li><ins>NOTE: The above call cannot fail because imported module requests are a subset of <var>module</var>.[[RequestedModules]], and these have been resolved earlier in this algorithm.</ins></li><li>Let <var>namespace</var> be ?&nbsp;<emu-xref aoid="GetModuleNamespace"><a href="https://tc39.es/ecma262/#sec-getmodulenamespace">GetModuleNamespace</a></emu-xref>(<var>importedModule</var>).</li><li>Perform !&nbsp;<var>env</var>.CreateImmutableBinding(<var>in</var>.[[LocalName]], <emu-val>true</emu-val>).</li><li>Perform !&nbsp;<var>env</var>.InitializeBinding(<var>in</var>.[[LocalName]], <var>namespace</var>).</li></ol></li><li>Else,<ol><li><ins>Let <var>importedModule</var> be !&nbsp;<emu-xref aoid="HostResolveImportedModule"><a href="https://tc39.es/ecma262/#sec-hostresolveimportedmodule">HostResolveImportedModule</a></emu-xref>(<var>module</var>, <var>in</var>.[[ModuleRequest]]).</ins></li><li><ins>NOTE: The above call cannot fail because imported module requests are a subset of <var>module</var>.[[RequestedModules]], and these have been resolved earlier in this algorithm.</ins></li><li>Let <var>resolution</var> be ?&nbsp;<var>importedModule</var>.ResolveExport(<var>in</var>.[[ImportName]]).</li><li>If <var>resolution</var> is <emu-val>null</emu-val> or <emu-const>ambiguous</emu-const>, throw a <emu-val>SyntaxError</emu-val> exception.</li><li>If <var>resolution</var>.[[BindingName]] is <emu-const>namespace</emu-const>, then<ol><li>Let <var>namespace</var> be ?&nbsp;<emu-xref aoid="GetModuleNamespace"><a href="https://tc39.es/ecma262/#sec-getmodulenamespace">GetModuleNamespace</a></emu-xref>(<var>resolution</var>.[[Module]]).</li><li>Perform !&nbsp;<var>env</var>.CreateImmutableBinding(<var>in</var>.[[LocalName]], <emu-val>true</emu-val>).</li><li>Perform !&nbsp;<var>env</var>.InitializeBinding(<var>in</var>.[[LocalName]], <var>namespace</var>).</li></ol></li><li>Else,<ol><li>Perform <var>env</var>.CreateImportBinding(<var>in</var>.[[LocalName]], <var>resolution</var>.[[Module]], <var>resolution</var>.[[BindingName]]).</li></ol></li></ol></li></ol></li><li>Let <var>moduleContext</var> be a new ECMAScript code <emu-xref href="#sec-execution-contexts"><a href="https://tc39.es/ecma262/#sec-execution-contexts">execution context</a></emu-xref>.</li><li>Set the Function of <var>moduleContext</var> to <emu-val>null</emu-val>.</li><li><emu-xref href="#assert"><a href="https://tc39.es/ecma262/#assert">Assert</a></emu-xref>: <var>module</var>.[[Realm]] is not <emu-val>undefined</emu-val>.</li><li>Set the <emu-xref href="#realm"><a href="https://tc39.es/ecma262/#realm">Realm</a></emu-xref> of <var>moduleContext</var> to <var>module</var>.[[Realm]].</li><li>Set the ScriptOrModule of <var>moduleContext</var> to <var>module</var>.</li><li>Set the VariableEnvironment of <var>moduleContext</var> to <var>module</var>.[[Environment]].</li><li>Set the LexicalEnvironment of <var>moduleContext</var> to <var>module</var>.[[Environment]].</li><li>Set the PrivateEnvironment of <var>moduleContext</var> to <emu-val>null</emu-val>.</li><li>Set <var>module</var>.[[Context]] to <var>moduleContext</var>.</li><li>Push <var>moduleContext</var> onto the <emu-xref href="#execution-context-stack"><a href="https://tc39.es/ecma262/#execution-context-stack">execution context stack</a></emu-xref>; <var>moduleContext</var> is now the <emu-xref href="#running-execution-context"><a href="https://tc39.es/ecma262/#running-execution-context">running execution context</a></emu-xref>.</li><li>Let <var>code</var> be <var>module</var>.[[ECMAScriptCode]].</li><li>Let <var>varDeclarations</var> be the <emu-xref aoid="VarScopedDeclarations"><a href="https://tc39.es/ecma262/#sec-static-semantics-varscopeddeclarations">VarScopedDeclarations</a></emu-xref> of <var>code</var>.</li><li>Let <var>declaredVarNames</var> be a new empty <emu-xref href="#sec-list-and-record-specification-type"><a href="https://tc39.es/ecma262/#sec-list-and-record-specification-type">List</a></emu-xref>.</li><li>For each element <var>d</var> of <var>varDeclarations</var>, do<ol><li>For each element <var>dn</var> of the <emu-xref aoid="BoundNames"><a href="https://tc39.es/ecma262/#sec-static-semantics-boundnames">BoundNames</a></emu-xref> of <var>d</var>, do<ol><li>If <var>dn</var> is not an element of <var>declaredVarNames</var>, then<ol><li>Perform !&nbsp;<var>env</var>.CreateMutableBinding(<var>dn</var>, <emu-val>false</emu-val>).</li><li>Perform !&nbsp;<var>env</var>.InitializeBinding(<var>dn</var>, <emu-val>undefined</emu-val>).</li><li>Append <var>dn</var> to <var>declaredVarNames</var>.</li></ol></li></ol></li></ol></li><li>Let <var>lexDeclarations</var> be the <emu-xref aoid="LexicallyScopedDeclarations"><a href="https://tc39.es/ecma262/#sec-static-semantics-lexicallyscopeddeclarations">LexicallyScopedDeclarations</a></emu-xref> of <var>code</var>.</li><li>Let <var>privateEnv</var> be <emu-val>null</emu-val>.</li><li>For each element <var>d</var> of <var>lexDeclarations</var>, do<ol><li>For each element <var>dn</var> of the <emu-xref aoid="BoundNames"><a href="https://tc39.es/ecma262/#sec-static-semantics-boundnames">BoundNames</a></emu-xref> of <var>d</var>, do<ol><li>If <emu-xref aoid="IsConstantDeclaration"><a href="https://tc39.es/ecma262/#sec-static-semantics-isconstantdeclaration">IsConstantDeclaration</a></emu-xref> of <var>d</var> is <emu-val>true</emu-val>, then<ol><li>Perform !&nbsp;<var>env</var>.CreateImmutableBinding(<var>dn</var>, <emu-val>true</emu-val>).</li></ol></li><li>Else,<ol><li>Perform !&nbsp;<var>env</var>.CreateMutableBinding(<var>dn</var>, <emu-val>false</emu-val>).</li></ol></li><li>If <var>d</var> is a <emu-nt><a href="https://tc39.es/ecma262/#prod-FunctionDeclaration">FunctionDeclaration</a></emu-nt>, a <emu-nt><a href="https://tc39.es/ecma262/#prod-GeneratorDeclaration">GeneratorDeclaration</a></emu-nt>, an <emu-nt><a href="https://tc39.es/ecma262/#prod-AsyncFunctionDeclaration">AsyncFunctionDeclaration</a></emu-nt>, or an <emu-nt><a href="https://tc39.es/ecma262/#prod-AsyncGeneratorDeclaration">AsyncGeneratorDeclaration</a></emu-nt>, then<ol><li>Let <var>fo</var> be <emu-xref aoid="InstantiateFunctionObject"><a href="https://tc39.es/ecma262/#sec-runtime-semantics-instantiatefunctionobject">InstantiateFunctionObject</a></emu-xref> of <var>d</var> with arguments <var>env</var> and <var>privateEnv</var>.</li><li>Perform !&nbsp;<var>env</var>.InitializeBinding(<var>dn</var>, <var>fo</var>).</li></ol></li></ol></li></ol></li><li>Remove <var>moduleContext</var> from the <emu-xref href="#execution-context-stack"><a href="https://tc39.es/ecma262/#execution-context-stack">execution context stack</a></emu-xref>.</li><li>Return <emu-const>unused</emu-const>.
+          </li></ol></emu-alg>
+        </emu-clause>
+      </emu-clause>
+
+      <emu-clause id="sec-hostresolvemodulereflection" type="host-defined abstract operation">
+        <h1><span class="secnum">2.1.1.4</span> 
+          <ins>HostResolveModuleReflection (
+            <var>referencingScriptOrModule</var>: a Script Record, a Module Record, or <emu-val>null</emu-val>,
+            <var>specifier</var>: a <emu-nt id="_ref_35"><a href="#prod-ModuleSpecifier">ModuleSpecifier</a></emu-nt> String,
+          ): either a normal completion containing an Object or a throw completion</ins>
+        </h1>
+        <p>The <emu-xref href="#host-defined"><a href="https://tc39.es/ecma262/#host-defined">host-defined</a></emu-xref> abstract operation UNKNOWN takes UNPARSEABLE ARGUMENTS. It provides the Object that corresponds to module reflection of <var>specifier</var> occurring within the context of the script or module represented by <var>referencingScriptOrModule</var>. Like <emu-xref aoid="HostResolveImportedModule"><a href="https://tc39.es/ecma262/#sec-hostresolveimportedmodule">HostResolveImportedModule</a></emu-xref>, <var>referencingScriptOrModule</var> may be <emu-val>null</emu-val> if the resolution is being performed in the context of an <emu-xref href="#sec-import-calls" id="_ref_2"><a href="#sec-import-calls"><code>import()</code></a></emu-xref> expression and there is no <emu-xref href="#job-activescriptormodule"><a href="https://tc39.es/ecma262/#job-activescriptormodule">active script or module</a></emu-xref> at that time.</p>
+
+        <p>An implementation of HostResolveModuleReflection must conform to the following requirements:</p>
+        <ul>
+          <li>
+            If a module reflection object corresponding to the pair <var>referencingScriptOrModule</var>, <var>specifier</var> does not exist or cannot be created, an exception must be thrown.
+          </li>
+          <li>
+            Each time this operation is called with a specific <var>referencingScriptOrModule</var>, <var>specifier</var> pair as arguments it must return the same object if it completes normally.
+          </li>
+        </ul>
+        <emu-note><span class="note">Note</span><div class="note-contents">
+          <p>It is a TODO for this specification to further refine the <emu-xref href="#host"><a href="https://tc39.es/ecma262/#host">host</a></emu-xref> invariants for module reflection.</p>
+        </div></emu-note>
+      </emu-clause>
+
+      <emu-clause id="sec-hostimportmoduledynamically" type="host-defined abstract operation">
+        <h1><span class="secnum">2.1.1.5</span> 
+          HostImportModuleDynamically (
+            <var>referencingScriptOrModule</var>: a Script Record, a Module Record, or <emu-val>null</emu-val>,
+            <var>specifier</var>: a <emu-nt id="_ref_36"><a href="#prod-ModuleSpecifier">ModuleSpecifier</a></emu-nt> String,
+            <ins><var>reflection</var>: <emu-const>none</emu-const> or <emu-const>module</emu-const>,</ins>
+            <var>promiseCapability</var>: a PromiseCapability Record,
+          ): <emu-const>unused</emu-const>
+        </h1>
+        <p>The <emu-xref href="#host-defined"><a href="https://tc39.es/ecma262/#host-defined">host-defined</a></emu-xref> abstract operation UNKNOWN takes UNPARSEABLE ARGUMENTS. It performs any necessary setup work in order to make available the module corresponding to <var>specifier</var> occurring within the context of the script or module represented by <var>referencingScriptOrModule</var>. <var>referencingScriptOrModule</var> may be <emu-val>null</emu-val> if there is no <emu-xref href="#job-activescriptormodule"><a href="https://tc39.es/ecma262/#job-activescriptormodule">active script or module</a></emu-xref> when the <emu-xref href="#sec-import-calls" id="_ref_3"><a href="#sec-import-calls"><code>import()</code></a></emu-xref> expression occurs. It then performs <emu-xref aoid="FinishDynamicImport"><a href="https://tc39.es/ecma262/#sec-finishdynamicimport">FinishDynamicImport</a></emu-xref> to finish the dynamic import process.</p>
+        <p>An implementation of HostImportModuleDynamically must conform to the following requirements:</p>
+
+        <ul>
+          <li>
+            It must return <emu-const>unused</emu-const>. Success or failure must instead be signaled as discussed below.
+          </li>
+          <li>
+            The <emu-xref href="#host-environment"><a href="https://tc39.es/ecma262/#host-environment">host environment</a></emu-xref> must conform to one of the two following sets of requirements:
+            <dl>
+              <dt>Success path</dt>
+
+              <dd>
+                <ul>
+                  <li>At some future time, the <emu-xref href="#host-environment"><a href="https://tc39.es/ecma262/#host-environment">host environment</a></emu-xref> must perform <emu-xref aoid="FinishDynamicImport"><a href="https://tc39.es/ecma262/#sec-finishdynamicimport">FinishDynamicImport</a></emu-xref>(<var>referencingScriptOrModule</var>, <var>specifier</var>, <ins><var>reflection</var>, </ins><var>promiseCapability</var>, <var>promise</var>), where <var>promise</var> is a Promise resolved with <emu-val>undefined</emu-val>.</li>
+
+                  <li>Any subsequent call to <emu-xref aoid="HostResolveImportedModule"><a href="https://tc39.es/ecma262/#sec-hostresolveimportedmodule">HostResolveImportedModule</a></emu-xref> after <emu-xref aoid="FinishDynamicImport"><a href="https://tc39.es/ecma262/#sec-finishdynamicimport">FinishDynamicImport</a></emu-xref> has completed, given the arguments <var>referencingScriptOrModule</var> and <var>specifier</var><ins> when <var>reflection</var> is <emu-const>none</emu-const></ins>, must return a <emu-xref href="#sec-completion-record-specification-type"><a href="https://tc39.es/ecma262/#sec-completion-record-specification-type">normal completion containing</a></emu-xref> a module which has already been evaluated, i.e. whose Evaluate concrete method has already been called and returned a <emu-xref href="#sec-completion-record-specification-type"><a href="https://tc39.es/ecma262/#sec-completion-record-specification-type">normal completion</a></emu-xref>.</li>
+                </ul>
+              </dd>
+
+              <dt>Failure path</dt>
+
+              <dd>
+                <ul>
+                  <li>At some future time, the <emu-xref href="#host-environment"><a href="https://tc39.es/ecma262/#host-environment">host environment</a></emu-xref> must perform <emu-xref aoid="FinishDynamicImport"><a href="https://tc39.es/ecma262/#sec-finishdynamicimport">FinishDynamicImport</a></emu-xref>(<var>referencingScriptOrModule</var>, <var>specifier</var>, <ins><var>reflection</var>, </ins><var>promiseCapability</var>, <var>promise</var>), where <var>promise</var> is a Promise rejected with an error representing the cause of failure.</li>
+                </ul>
+              </dd>
+            </dl>
+          </li>
+          <li>
+            If the <emu-xref href="#host-environment"><a href="https://tc39.es/ecma262/#host-environment">host environment</a></emu-xref> takes the success path once for a given <var>referencingScriptOrModule</var>, <var>specifier</var> pair, it must always do so for subsequent calls.
+          </li>
+          <li>
+            The operation must not call <var>promiseCapability</var>.[[Resolve]] or <var>promiseCapability</var>.[[Reject]], but instead must treat <var>promiseCapability</var> as an opaque identifying value to be passed through to <emu-xref aoid="FinishDynamicImport"><a href="https://tc39.es/ecma262/#sec-finishdynamicimport">FinishDynamicImport</a></emu-xref>.
+          </li>
+        </ul>
+
+        <p>The actual process performed is <emu-xref href="#host-defined"><a href="https://tc39.es/ecma262/#host-defined">host-defined</a></emu-xref>, but typically consists of performing whatever I/O operations are necessary to allow <emu-xref aoid="HostResolveImportedModule"><a href="https://tc39.es/ecma262/#sec-hostresolveimportedmodule">HostResolveImportedModule</a></emu-xref> to synchronously retrieve the appropriate <emu-xref href="#sec-abstract-module-records"><a href="https://tc39.es/ecma262/#sec-abstract-module-records">Module Record</a></emu-xref>, and then calling its Evaluate concrete method. This might require performing similar normalization as <emu-xref aoid="HostResolveImportedModule"><a href="https://tc39.es/ecma262/#sec-hostresolveimportedmodule">HostResolveImportedModule</a></emu-xref> does.</p>
+      </emu-clause>
+
+      <emu-clause id="sec-finishdynamicimport" type="abstract operation">
+        <h1><span class="secnum">2.1.1.6</span> 
+          FinishDynamicImport (
+            <var>referencingScriptOrModule</var>: unknown,
+            <var>specifier</var>: unknown,
+            <ins><var>reflection</var>: <emu-const>none</emu-const> or <emu-const>module</emu-const> ,</ins>
+            <var>promiseCapability</var>: a PromiseCapability Record,
+            <var>innerPromise</var>: unknown,
+          ): <emu-const>unused</emu-const>
+        </h1>
+        <p>The abstract operation UNKNOWN takes UNPARSEABLE ARGUMENTS. FinishDynamicImport completes the process of a dynamic import originally started by an <emu-xref href="#sec-import-calls" id="_ref_4"><a href="#sec-import-calls"><code>import()</code></a></emu-xref> call, resolving or rejecting the promise returned by that call as appropriate according to <var>innerPromise</var>'s resolution. It is performed by <emu-xref href="#host-environment"><a href="https://tc39.es/ecma262/#host-environment">host environments</a></emu-xref> as part of <emu-xref aoid="HostImportModuleDynamically"><a href="https://tc39.es/ecma262/#sec-hostimportmoduledynamically">HostImportModuleDynamically</a></emu-xref>. It performs the following steps when called:</p>
+        <emu-alg><ol><li>Let <var>fulfilledClosure</var> be a new <emu-xref href="#sec-abstract-closure"><a href="https://tc39.es/ecma262/#sec-abstract-closure">Abstract Closure</a></emu-xref> with parameters (<var>result</var>) that captures <var>referencingScriptOrModule</var>, <var>specifier</var>, and <var>promiseCapability</var> and performs the following steps when called:<ol><li><emu-xref href="#assert"><a href="https://tc39.es/ecma262/#assert">Assert</a></emu-xref>: <var>result</var> is <emu-val>undefined</emu-val>.</li><li><ins>If <var>reflection</var> is <emu-const>module</emu-const>, then</ins><ol><li><ins>Let <var>reflectionObj</var> be HostResolveModuleReflection(<var>module</var>, <var>in</var>.[[ModuleRequest]]).</ins></li><li><ins><emu-xref aoid="IfAbruptRejectPromise"><a href="https://tc39.es/ecma262/#sec-ifabruptrejectpromise">IfAbruptRejectPromise</a></emu-xref>(<var>reflectionObj</var>, <var>promiseCapability</var>).</ins></li><li><ins>Perform !&nbsp;<emu-xref aoid="Call"><a href="https://tc39.es/ecma262/#sec-call">Call</a></emu-xref>(<var>promiseCapability</var>.[[Resolve]], <emu-val>undefined</emu-val>, « <var>reflectionObj</var> »).</ins></li><li><ins>Return <emu-const>unused</emu-const>.</ins></li></ol></li><li>Let <var>moduleRecord</var> be !&nbsp;<emu-xref aoid="HostResolveImportedModule"><a href="https://tc39.es/ecma262/#sec-hostresolveimportedmodule">HostResolveImportedModule</a></emu-xref>(<var>referencingScriptOrModule</var>, <var>specifier</var>).</li><li><emu-xref href="#assert"><a href="https://tc39.es/ecma262/#assert">Assert</a></emu-xref>: Evaluate has already been invoked on <var>moduleRecord</var> and successfully completed.</li><li>Let <var>namespace</var> be <emu-xref aoid="Completion"><a href="https://tc39.es/ecma262/#sec-completion-ao">Completion</a></emu-xref>(<emu-xref aoid="GetModuleNamespace"><a href="https://tc39.es/ecma262/#sec-getmodulenamespace">GetModuleNamespace</a></emu-xref>(<var>moduleRecord</var>)).</li><li>If <var>namespace</var> is an <emu-xref href="#sec-completion-record-specification-type"><a href="https://tc39.es/ecma262/#sec-completion-record-specification-type">abrupt completion</a></emu-xref>, then<ol><li>Perform !&nbsp;<emu-xref aoid="Call"><a href="https://tc39.es/ecma262/#sec-call">Call</a></emu-xref>(<var>promiseCapability</var>.[[Reject]], <emu-val>undefined</emu-val>, « <var>namespace</var>.[[Value]] »).</li></ol></li><li>Else,<ol><li>Perform !&nbsp;<emu-xref aoid="Call"><a href="https://tc39.es/ecma262/#sec-call">Call</a></emu-xref>(<var>promiseCapability</var>.[[Resolve]], <emu-val>undefined</emu-val>, « <var>namespace</var>.[[Value]] »).</li></ol></li><li>Return <emu-const>unused</emu-const>.</li></ol></li><li>Let <var>onFulfilled</var> be <emu-xref aoid="CreateBuiltinFunction"><a href="https://tc39.es/ecma262/#sec-createbuiltinfunction">CreateBuiltinFunction</a></emu-xref>(<var>fulfilledClosure</var>, 0, <emu-val>""</emu-val>, « »).</li><li>Let <var>rejectedClosure</var> be a new <emu-xref href="#sec-abstract-closure"><a href="https://tc39.es/ecma262/#sec-abstract-closure">Abstract Closure</a></emu-xref> with parameters (<var>error</var>) that captures <var>promiseCapability</var> and performs the following steps when called:<ol><li>Perform !&nbsp;<emu-xref aoid="Call"><a href="https://tc39.es/ecma262/#sec-call">Call</a></emu-xref>(<var>promiseCapability</var>.[[Reject]], <emu-val>undefined</emu-val>, « <var>error</var> »).</li><li>Return <emu-const>unused</emu-const>.</li></ol></li><li>Let <var>onRejected</var> be <emu-xref aoid="CreateBuiltinFunction"><a href="https://tc39.es/ecma262/#sec-createbuiltinfunction">CreateBuiltinFunction</a></emu-xref>(<var>rejectedClosure</var>, 0, <emu-val>""</emu-val>, « »).</li><li>Perform <emu-xref aoid="PerformPromiseThen"><a href="https://tc39.es/ecma262/#sec-performpromisethen">PerformPromiseThen</a></emu-xref>(<var>innerPromise</var>, <var>onFulfilled</var>, <var>onRejected</var>).</li><li>Return <emu-const>unused</emu-const>.
+        </li></ol></emu-alg>
+      </emu-clause>
+
+    </emu-clause>
+  </emu-clause>
+
+  <emu-clause id="sec-imports">
+    <h1><span class="secnum">2.2</span> Imports</h1>
+    <h2>Syntax</h2>
+    <emu-grammar type="definition"><emu-production name="ImportDeclaration" id="prod-ImportDeclaration">
+    <emu-nt><a href="#prod-ImportDeclaration">ImportDeclaration</a></emu-nt> <emu-geq>:</emu-geq> <emu-rhs a="glhuxxec" id="prod-WzAgO-V_">
+        <emu-t>import</emu-t>
+        <emu-nt id="_ref_37"><a href="#prod-ImportClause">ImportClause</a></emu-nt>
+        <emu-nt id="_ref_38"><a href="#prod-FromClause">FromClause</a></emu-nt>
+        <emu-t>;</emu-t>
+    </emu-rhs>
+    <emu-rhs a="odcuzpbi" id="prod-CDGJVPkq">
+        <emu-t>import</emu-t>
+        <emu-nt id="_ref_39"><a href="#prod-ModuleSpecifier">ModuleSpecifier</a></emu-nt>
+        <emu-t>;</emu-t>
+    </emu-rhs>
+    <ins><emu-rhs a="vwe703cw" id="prod-F02Rz8zd">
+        <emu-t>import</emu-t>
+        <emu-t>module</emu-t>
+        <emu-nt id="_ref_40"><a href="#prod-ImportedBinding">ImportedBinding</a></emu-nt>
+        <emu-nt id="_ref_41"><a href="#prod-FromClause">FromClause</a></emu-nt>
+        <emu-t>;</emu-t>
+    </emu-rhs></ins>
+</emu-production>
+<emu-production name="ImportClause" id="prod-ImportClause">
+    <emu-nt><a href="#prod-ImportClause">ImportClause</a></emu-nt> <emu-geq>:</emu-geq> <emu-rhs a="oi8izote">
+        <emu-nt id="_ref_42"><a href="#prod-ImportedDefaultBinding">ImportedDefaultBinding</a></emu-nt>
+    </emu-rhs>
+    <emu-rhs a="81tm-dw4">
+        <emu-nt id="_ref_43"><a href="#prod-NameSpaceImport">NameSpaceImport</a></emu-nt>
+    </emu-rhs>
+    <emu-rhs a="zfagpfvq">
+        <emu-nt id="_ref_44"><a href="#prod-NamedImports">NamedImports</a></emu-nt>
+    </emu-rhs>
+    <emu-rhs a="y9r1l58g">
+        <emu-nt id="_ref_45"><a href="#prod-ImportedDefaultBinding">ImportedDefaultBinding</a></emu-nt>
+        <emu-t>,</emu-t>
+        <emu-nt id="_ref_46"><a href="#prod-NameSpaceImport">NameSpaceImport</a></emu-nt>
+    </emu-rhs>
+    <emu-rhs a="ih8rgsdx">
+        <emu-nt id="_ref_47"><a href="#prod-ImportedDefaultBinding">ImportedDefaultBinding</a></emu-nt>
+        <emu-t>,</emu-t>
+        <emu-nt id="_ref_48"><a href="#prod-NamedImports">NamedImports</a></emu-nt>
+    </emu-rhs>
+</emu-production>
+<emu-production name="ImportedDefaultBinding" id="prod-ImportedDefaultBinding">
+    <emu-nt><a href="#prod-ImportedDefaultBinding">ImportedDefaultBinding</a></emu-nt> <emu-geq>:</emu-geq> <emu-rhs a="vt7awvcp">
+        <emu-nt id="_ref_49"><a href="#prod-ImportedBinding">ImportedBinding</a></emu-nt>
+    </emu-rhs>
+</emu-production>
+<emu-production name="NameSpaceImport" id="prod-NameSpaceImport">
+    <emu-nt><a href="#prod-NameSpaceImport">NameSpaceImport</a></emu-nt> <emu-geq>:</emu-geq> <emu-rhs a="t2qf80pb">
+        <emu-t>*</emu-t>
+        <emu-t>as</emu-t>
+        <emu-nt id="_ref_50"><a href="#prod-ImportedBinding">ImportedBinding</a></emu-nt>
+    </emu-rhs>
+</emu-production>
+<emu-production name="NamedImports" id="prod-NamedImports">
+    <emu-nt><a href="#prod-NamedImports">NamedImports</a></emu-nt> <emu-geq>:</emu-geq> <emu-rhs a="gbpaspne">
+        <emu-t>{</emu-t>
+        <emu-t>}</emu-t>
+    </emu-rhs>
+    <emu-rhs a="g1js-lhi">
+        <emu-t>{</emu-t>
+        <emu-nt id="_ref_51"><a href="#prod-ImportsList">ImportsList</a></emu-nt>
+        <emu-t>}</emu-t>
+    </emu-rhs>
+    <emu-rhs a="bxjtogxx">
+        <emu-t>{</emu-t>
+        <emu-nt id="_ref_52"><a href="#prod-ImportsList">ImportsList</a></emu-nt>
+        <emu-t>,</emu-t>
+        <emu-t>}</emu-t>
+    </emu-rhs>
+</emu-production>
+<emu-production name="FromClause" id="prod-FromClause">
+    <emu-nt><a href="#prod-FromClause">FromClause</a></emu-nt> <emu-geq>:</emu-geq> <emu-rhs a="rev6es22">
+        <emu-t>from</emu-t>
+        <emu-nt id="_ref_53"><a href="#prod-ModuleSpecifier">ModuleSpecifier</a></emu-nt>
+    </emu-rhs>
+</emu-production>
+<emu-production name="ImportsList" id="prod-ImportsList">
+    <emu-nt><a href="#prod-ImportsList">ImportsList</a></emu-nt> <emu-geq>:</emu-geq> <emu-rhs a="upllvvnq">
+        <emu-nt id="_ref_54"><a href="#prod-ImportSpecifier">ImportSpecifier</a></emu-nt>
+    </emu-rhs>
+    <emu-rhs a="ggcfvgot">
+        <emu-nt id="_ref_55"><a href="#prod-ImportsList">ImportsList</a></emu-nt>
+        <emu-t>,</emu-t>
+        <emu-nt id="_ref_56"><a href="#prod-ImportSpecifier">ImportSpecifier</a></emu-nt>
+    </emu-rhs>
+</emu-production>
+<emu-production name="ImportSpecifier" id="prod-ImportSpecifier">
+    <emu-nt><a href="#prod-ImportSpecifier">ImportSpecifier</a></emu-nt> <emu-geq>:</emu-geq> <emu-rhs a="vt7awvcp">
+        <emu-nt id="_ref_57"><a href="#prod-ImportedBinding">ImportedBinding</a></emu-nt>
+    </emu-rhs>
+    <emu-rhs a="nso-0w0x">
+        <emu-nt><a href="https://tc39.es/ecma262/#prod-ModuleExportName">ModuleExportName</a></emu-nt>
+        <emu-t>as</emu-t>
+        <emu-nt id="_ref_58"><a href="#prod-ImportedBinding">ImportedBinding</a></emu-nt>
+    </emu-rhs>
+</emu-production>
+<emu-production name="ModuleSpecifier" id="prod-ModuleSpecifier">
+    <emu-nt><a href="#prod-ModuleSpecifier">ModuleSpecifier</a></emu-nt> <emu-geq>:</emu-geq> <emu-rhs a="xhtltz00" id="prod-hjv695N2">
+        <emu-nt><a href="https://tc39.es/ecma262/#prod-StringLiteral">StringLiteral</a></emu-nt>
+    </emu-rhs>
+</emu-production>
+<emu-production name="ImportedBinding" id="prod-ImportedBinding">
+    <emu-nt><a href="#prod-ImportedBinding">ImportedBinding</a></emu-nt> <emu-geq>:</emu-geq> <emu-rhs a="ni7cnis3">
+        <emu-nt params="~Yield, +Await"><a href="https://tc39.es/ecma262/#prod-BindingIdentifier">BindingIdentifier</a><emu-mods><emu-params>[~Yield, +Await]</emu-params></emu-mods></emu-nt>
+    </emu-rhs>
+</emu-production>
+</emu-grammar>
+  
+    <emu-clause id="sec-static-semantics-importentries" oldids="sec-module-semantics-static-semantics-importentries,sec-imports-static-semantics-importentries" type="syntax-directed operation" aoid="ImportEntries"><span id="sec-imports-static-semantics-importentries"></span><span id="sec-module-semantics-static-semantics-importentries"></span>
+      <h1><span class="secnum">2.2.1</span> Static Semantics: ImportEntries ( )</h1>
+      <p>The <emu-xref href="#sec-algorithm-conventions-syntax-directed-operations"><a href="https://tc39.es/ecma262/#sec-algorithm-conventions-syntax-directed-operations">syntax-directed operation</a></emu-xref> ImportEntries takes no arguments and returns a <emu-xref href="#sec-list-and-record-specification-type"><a href="https://tc39.es/ecma262/#sec-list-and-record-specification-type">List</a></emu-xref> of <emu-xref href="#importentry-record" id="_ref_19"><a href="#importentry-record">ImportEntry Records</a></emu-xref>. It is defined piecewise over the following productions:</p>
+      <emu-grammar><emu-production name="Module" collapsed="">
+    <emu-nt><a href="https://tc39.es/ecma262/#prod-Module">Module</a></emu-nt> <emu-geq>:</emu-geq> <emu-rhs a="n7nathbb"><emu-gann>[empty]</emu-gann></emu-rhs>
+</emu-production>
+</emu-grammar>
+      <emu-alg><ol><li>Return a new empty <emu-xref href="#sec-list-and-record-specification-type"><a href="https://tc39.es/ecma262/#sec-list-and-record-specification-type">List</a></emu-xref>.</li></ol></emu-alg>
+      <emu-grammar><emu-production name="ModuleItemList" collapsed="">
+    <emu-nt><a href="https://tc39.es/ecma262/#prod-ModuleItemList">ModuleItemList</a></emu-nt> <emu-geq>:</emu-geq> <emu-rhs a="dd23jrxs">
+        <emu-nt><a href="https://tc39.es/ecma262/#prod-ModuleItemList">ModuleItemList</a></emu-nt>
+        <emu-nt><a href="https://tc39.es/ecma262/#prod-ModuleItem">ModuleItem</a></emu-nt>
+    </emu-rhs>
+</emu-production>
+</emu-grammar>
+      <emu-alg><ol><li>Let <var>entries1</var> be <emu-xref aoid="ImportEntries" id="_ref_20"><a href="#sec-static-semantics-importentries">ImportEntries</a></emu-xref> of <emu-nt><a href="https://tc39.es/ecma262/#prod-ModuleItemList">ModuleItemList</a></emu-nt>.</li><li>Let <var>entries2</var> be <emu-xref aoid="ImportEntries" id="_ref_21"><a href="#sec-static-semantics-importentries">ImportEntries</a></emu-xref> of <emu-nt><a href="https://tc39.es/ecma262/#prod-ModuleItem">ModuleItem</a></emu-nt>.</li><li>Return the <emu-xref href="#list-concatenation"><a href="https://tc39.es/ecma262/#list-concatenation">list-concatenation</a></emu-xref> of <var>entries1</var> and <var>entries2</var>.</li></ol></emu-alg>
+      <emu-grammar><emu-production name="ModuleItem">
+    <emu-nt><a href="https://tc39.es/ecma262/#prod-ModuleItem">ModuleItem</a></emu-nt> <emu-geq>:</emu-geq> <emu-rhs a="ky6bsn7x">
+        <emu-nt><a href="https://tc39.es/ecma262/#prod-ExportDeclaration">ExportDeclaration</a></emu-nt>
+    </emu-rhs>
+    <emu-rhs a="15hryu6r">
+        <emu-nt><a href="https://tc39.es/ecma262/#prod-StatementListItem">StatementListItem</a></emu-nt>
+    </emu-rhs>
+</emu-production>
+</emu-grammar>
+      <emu-alg><ol><li>Return a new empty <emu-xref href="#sec-list-and-record-specification-type"><a href="https://tc39.es/ecma262/#sec-list-and-record-specification-type">List</a></emu-xref>.</li></ol></emu-alg>
+      <emu-grammar><emu-production name="ImportDeclaration" collapsed="">
+    <emu-nt><a href="#prod-ImportDeclaration">ImportDeclaration</a></emu-nt> <emu-geq>:</emu-geq> <emu-rhs a="glhuxxec" id="prod-4FL2ok6-">
+        <emu-t>import</emu-t>
+        <emu-nt id="_ref_59"><a href="#prod-ImportClause">ImportClause</a></emu-nt>
+        <emu-nt id="_ref_60"><a href="#prod-FromClause">FromClause</a></emu-nt>
+        <emu-t>;</emu-t>
+    </emu-rhs>
+</emu-production>
+</emu-grammar>
+      <emu-alg><ol><li>Let <var>module</var> be the sole element of <emu-xref aoid="ModuleRequests" id="_ref_22"><a href="#sec-static-semantics-modulerequests">ModuleRequests</a></emu-xref> of <emu-nt id="_ref_61"><a href="#prod-FromClause">FromClause</a></emu-nt>.</li><li>Return <emu-xref aoid="ImportEntriesForModule"><a href="https://tc39.es/ecma262/#sec-static-semantics-importentriesformodule">ImportEntriesForModule</a></emu-xref> of <emu-nt id="_ref_62"><a href="#prod-ImportClause">ImportClause</a></emu-nt> with argument <var>module</var>.</li></ol></emu-alg>
+      <emu-grammar><emu-production name="ImportDeclaration" collapsed="">
+    <emu-nt><a href="#prod-ImportDeclaration">ImportDeclaration</a></emu-nt> <emu-geq>:</emu-geq> <emu-rhs a="odcuzpbi" id="prod--ST7ch2j">
+        <emu-t>import</emu-t>
+        <emu-nt id="_ref_63"><a href="#prod-ModuleSpecifier">ModuleSpecifier</a></emu-nt>
+        <emu-t>;</emu-t>
+    </emu-rhs>
+</emu-production>
+</emu-grammar>
+      <emu-alg><ol><li>Return a new empty <emu-xref href="#sec-list-and-record-specification-type"><a href="https://tc39.es/ecma262/#sec-list-and-record-specification-type">List</a></emu-xref>.</li></ol></emu-alg>
+      <emu-grammar><ins><emu-production name="ImportDeclaration" collapsed="">
+    <emu-nt><a href="#prod-ImportDeclaration">ImportDeclaration</a></emu-nt> <emu-geq>:</emu-geq> <emu-rhs a="vwe703cw" id="prod-3Lmk94i-">
+        <emu-t>import</emu-t>
+        <emu-t>module</emu-t>
+        <emu-nt id="_ref_64"><a href="#prod-ImportedBinding">ImportedBinding</a></emu-nt>
+        <emu-nt id="_ref_65"><a href="#prod-FromClause">FromClause</a></emu-nt>
+        <emu-t>;</emu-t>
+    </emu-rhs>
+</emu-production></ins>
+</emu-grammar>
+      <emu-alg><ol><li><ins>Let <var>localName</var> be the sole element of <emu-xref aoid="BoundNames"><a href="https://tc39.es/ecma262/#sec-static-semantics-boundnames">BoundNames</a></emu-xref> of <emu-nt id="_ref_66"><a href="#prod-ImportedBinding">ImportedBinding</a></emu-nt>.</ins></li><li><ins>Let <var>reflectionEntry</var> be the <emu-xref href="#importentry-record" id="_ref_23"><a href="#importentry-record">ImportEntry Record</a></emu-xref> { [[ModuleRequest]]: <var>module</var>, [[ImportName]]: <emu-const>module</emu-const>, [[LocalName]]: <var>localName</var> }.</ins></li><li><ins>Return « <var>reflectionEntry</var> ».</ins></li></ol></emu-alg>
+    </emu-clause>
+  </emu-clause>
 </emu-clause><emu-annex id="sec-copyright-and-software-license">
       <h1><span class="secnum">A</span> Copyright &amp; Software License</h1>
       
       <h2>Copyright Notice</h2>
-      <p>© 2021 Your Name(s) Here</p>
+      <p>© 2022 Luca Casonato, Guy Bedford</p>
 
       <h2>Software License</h2>
       <p>All Software contained in this document ("Software") is protected by copyright and is being made available under the "BSD License", included below. This Software may be subject to third party rights (rights from parties other than Ecma International), including patent rights, and no licenses under such third party rights are granted under this license even if the third party concerned is a member of Ecma International. SEE THE ECMA CODE OF CONDUCT IN PATENT MATTERS AVAILABLE AT https://ecma-international.org/memento/codeofconduct.htm FOR INFORMATION REGARDING THE LICENSING OF PATENT CLAIMS THAT ARE REQUIRED TO IMPLEMENT ECMA INTERNATIONAL STANDARDS.</p>

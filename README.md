@@ -2,100 +2,87 @@
 
 ## Status
 
-Champion(s): Guy Bedford, Luca Casonato
+Champion(s): Luca Casonato, Guy Bedford
 
-Author(s): Luca Casonato
+Author(s): Luca Casonato, Guy Bedford
 
 Stage: 1
 
 ## Motivation
 
-The WebAssembly [ECMAScript module integration proposal][wasm-esm] proposes direct
-integration of WebAssembly into the ES module system based on sharing JS and Wasm
-_module instances_ resolved by JS and Wasm imports.
+For both JavaScript and WebAssembly, there is a need to be able to more closely
+customize the loading, linking, and execution of modules beyond the standard
+host execution model.
 
-The Web Assembly [Module Linking Proposal][] extends the requirements for the
-ESM host integration to support a secondary type of module import - a
-_module type import_ as distinct from an _instance import_. Where an instance import
-would return a fully linked and evaluated `WebAssembly.Instance`, a module import
-would return the compiled but unlinked and unexecuted `WebAssembly.Module` object.
+For WebAssembly, imports and exports for WebAssembly models often require custom
+inspection and wrapping in order to behave correctly, which can be better
+provided via manual instantiation than relying directly on the base [ESM
+integration][wasm-esm] proposal.
 
-In the module linking proposal both types of object are importable and can be
-associated with the same imported Wasm module asset. In essence, the module type import
-provides the module constructor to create custom instances as having separate
-linear memory and linked bindings.
-
-The ability to obtain a module or an instance provides higher level control over the
-Wasm execution sandbox, which ends up being an important practical requirement in
-many Web Assembly workflows.
-
-The requirement for the ESM integration would thus be that two imports of the same
-asset may return a distinct ES module result based on some import hint.
-
-This proposal, using the principle of equal capability, proposes a similar hint
-to be in the form of ECMAScript syntax that enables the module import syntax to
-include import reflection syntax to indicate an alternative reflective API import,
-with the primary use case in mind of permitting these module type imports for Wasm.
-
-[Module Linking Proposal]: https://github.com/WebAssembly/module-linking/blob/master/proposals/module-linking/Explainer.md
-[wasm-esm]: https://github.com/WebAssembly/esm-integration/tree/master/proposals/esm-integration
+For JavaScript, creating userland loaders would require a module reflection type
+in order to share the host parsing, execution, security, and caching semantics.
 
 ## Proposal
 
-The proposal is to permit an optional string literal attribute to be associated
-with any import:
+This proposal allows ES modules to import a reified representation of the
+compiled source of a module when the host provides such a representation:
 
 ```js
-import x from "<specifier>" as "<reflection-type>";
+import module x from "<specifier>";
 ```
 
-Here the import reflection type is added to the end of the ImportStatement,
-prefixed by the "as" keyword. If combined with an import assertion, the
-assertion must always come _before_ the reflection type:
+The `module` reflection type is added to the beginning of the ImportStatement.
 
-```js
-import x from "<specifier>" assert {} as "<reflection-type>";
-```
-
-It is also possible to specify an import reflection if the import is not
-bound:
-
-```js
-import "<specifier>" as "<reflection-type>";
-```
-
-### Re-export statements
-
-```js
-export { default as x } from "<specifier>" as "<reflection-type>";
-```
-
-For re-export statements, the syntax is essentially identical to import
-statements.
+Only the above form is supported - named exports and unbound declarations are
+not supported.
 
 ### Dynamic import()
 
 ```js
-const x = await import("<specifier>", { as: "<reflection-type>" });
+const x = await import("<specifier>", { reflect: "module" });
 ```
 
-For dynamic imports, import reflection is specified in the same second attribute
-options bag that import assertions are specified in. The ordering of
-`asserts` vs `as` does not matter here.
+For dynamic imports, module import reflection is specified in the same second
+attribute options bag that import assertions are specified in, using the
+`reflect` key.
 
-## Integration with other specs and environments
-
-### WebAssembly ESM Integration
-
-Import a WebAssembly binary as a compiled module:
-
-##### `WebAssembly.Module` imports
-
-As explained in the motivation, supporting a `"wasm-module"` import reflection is a driving use case for this specification in order to change the behaviour of
-importing a direct compiled but unlinked [Wasm module object](https://webassembly.github.io/spec/js-api/index.html#modules):
+If the [asset references proposal][] advances in future it could share this same
+`reflect` key for dynamic asset imports as being symmetrical reflections:
 
 ```js
-import FooModule from "./foo.wasm" as "wasm-module";
+import asset x from "<specifier>";
+await import("<specifier>", { reflect: "asset" });
+```
+
+Only the `module` reflection is specified by this proposal.
+
+### JS Reflection
+
+The type of the reflection object for a JavaScript module is currently
+host-defined, but the goal would be for this to be defined to be an object that
+is compatible with objects defined by the [module blocks][] and the
+[compartments][] specifications.
+
+Specifying this object remains a TODO item for the proposal.
+
+### Wasm Reflection
+
+The type of the reflection object for WebAssembly would be a
+`WebAssembly.Module`, as defined in the [WebAssembly JS integration
+API][wasm-js-api].
+
+The reflection would represent an unlinked and uninstantiated module, while
+still being able to support the same CSP policy as the native [ESM
+integration][wasm-esm], avoiding the need for `unsafe-wasm-eval` for custom Wasm
+execution.
+
+Since reflection is defined through a host hook, this Wasm reflection is left to
+be specified in the Wasm [ESM Integration][wasm-esm].
+
+This allows workflows, as explained in the motivation, like the following:
+
+```js
+import module FooModule from "./foo.wasm";
 FooModule instanceof WebAssembly.Module; // true
 
 // For example, to run a WASI execution with an API like Node.js WASI:
@@ -109,68 +96,56 @@ const fooInstance = await WebAssembly.instantiate(FooModule, {
 wasi.start(fooInstance);
 ```
 
-#### Imports from WebAssembly
+The static analysis benefits of not needing a custom `fetch` and
+`WebAssembly.compileStreaming` benefit not only code analysis and security but
+also bundlers.
 
-Web Assembly would have the ability to expose import reflection in its
-imports if desired, as the [Module Linking proposal currently aims to specify](https://github.com/WebAssembly/module-linking/blob/main/proposals/module-linking/Binary.md#import-section-updates).
+In turn this enables [Wasm components to be able to import][]
+`WebAssembly.Module` objects themselves in future.
 
+### Other Module Types
 
-#### Security improvements
+Other module types may define their own host reflections. A module reflection
+may fail during the linking phase if it depends on a reflected import that the
+host cannot satisfy for lack of an available reflection for the corresponding
+module type.
 
-[CSP][] is a web platform feature that allows you to limit the capabilities the platform grants to a
-given site.
+## Security Benefits
 
-A common use is to disallow dynamic code generation means like `eval`. WASM compilation is
-unfortunatly completly dynamic right now (manual network fetch + compile), so WASM unconditionally
-requires a `script-src: unsafe-eval` CSP attribute. This makes WASM a potential security risk.
+Tracking the origins of a scripts or modules is important for protecting
+programs from cross-site scripting attacks, for example using [Content Security
+Policies][CSP].
 
-With this proposal, the WASM module would be known statically, so would not have to be considered as
-dynamic code generation. This would allow the web platform to lift this restriction for statically
-imported WASM modules, and instead just require `script-src: self` like for JS. Also see
+A common use is to disallow dynamic code generation means like `eval`. Wasm
+compilation is unfortunately completly dynamic right now (manual network fetch +
+compile), so Wasm unconditionally requires a `script-src: unsafe-wasm-eval` CSP
+attribute.
+
+With this proposal, the Wasm module would be known statically, so would not have
+to be considered as dynamic code generation. This would allow the web platform
+to lift this restriction for statically imported Wasm modules, and instead just
+require `script-src: self` (or possibly `wasm-src: self`) like for JS. Also see
 https://github.com/WebAssembly/esm-integration/issues/56.
 
-This does not just impact platforms using CSP, but also other platforms with systems to restrict
-permissions, such as Deno.
-
-[CSP]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy
-
-### HTML spec
-
-On the web platform, there are other APIs that have the ability to load ES
-modules. These also need to be able to specify import reflection. Here are
-some examples of how these might look.
-
-#### Web Workers
-
-```js
-const worker = new Worker("<specifier>", {
-  type: "module",
-  as: "<reflection-type>",
-});
-```
-
-#### `<script>` tags
-
-```html
-<script href="<specifier>" type="module" as="<reflection-type>" ></script>
-```
+This property does not just impact platforms using CSP, but also other platforms
+with systems to restrict permissions, such as Deno.
 
 ## Cache Key Semantics
 
-Semantically this proposal involves a relaxation of the `HostResolveImportedModule` idempotency requirement.
+The proposed approach would be a _clone_ behaviour, where imports to the same
+module of different reflection types result in separate keys. These semantics do
+run counter to the intuition that there is just one copy of a module.
 
-The proposed approach would be a _clone_ behaviour, where imports to the same module of different
-reflection types result in separate keys. These semantics do run counter to the intuition
-that there is just one copy of a module.
+The specification would then split the `HostResolveImportedModule` hook into two
+components - module asset resolution, and module asset interpretation. The
+module asset resolution component would retain the exact same idempotency
+requirement, while the module asset interpretation component would have
+idempotency down to keying on the module asset and reflection type pair.
 
-The specification would then split the `HostResolveImportedModule` hook into two components -
-module asset resolution, and module asset interpretation. The module asset resolution component
-would retain the exact same idempotency requirement, while the module asset interpretation component
-would have idempotency down to keying on the module asset and reflection type pair.
-
-Effectively, this splits the module cache into two separate caches - an asset cache retaining the
-current idempotency of the `HostResolveImportedModule` host hook, pointing to an opaque cached asset reference,
-and a module instance cache, keyed by this opaque asset reference and the reflection type.
+Effectively, this splits the module cache into two separate caches - an asset
+cache retaining the current idempotency of the `HostResolveImportedModule` host
+hook, pointing to an opaque cached asset reference, and a module instance cache,
+keyed by this opaque asset reference and the reflection type.
 
 Alternative proposals include:
 
@@ -180,34 +155,55 @@ Alternative proposals include:
   bad for composition--using two unrelated packages together could break, if
   they load the same module with disagreeing attributes.
 
-Both of these alternatives seem less versatile than the proposed _clone_ behaviour above.
+Both of these alternatives seem less versatile than the proposed _clone_
+behaviour above.
 
 ## Q&A
 
 **Q**: How does this relate to import assertions?
 
-**A**: Import assertions do not influence how an imported asset is evaluated, and they
-do not influence the HostResolveImportedModule idempotency requirements. This
-proposal does. Also see
+**A**: Import assertions do not influence how an imported asset is evaluated,
+and they do not influence the HostResolveImportedModule idempotency
+requirements. This proposal does. Also see
 https://github.com/tc39/proposal-import-assertions#follow-up-proposal-evaluator-attributes.
 
-**Q**: Are there use cases for this feature other than Web Assembly imports?
+**Q**: How does this relate to module blocks?
 
-**A**: One way of thinking about import reflections is that they vary the representation
-of a module being imported. If JS itself ever wanted to reflect module imports at a higher
-level of abstraction that is something that might be enabled by this work, for example being
-able to import an unexecuted JS module object that could be passed around. Simiarly, any asset
-imports that might have different representations in JS would benefit from import reflection
-that vary the way in which the module is reflected through importing.
+**A**: The module object that is reflected should be specified here to be
+compatible with the linking model of module blocks.
 
-**Q**: Would this proposal enable the importing of other languages directly as modules?
+**Q**: How does this relate to compartments?
+
+**A**: The module object that is reflected should be specified here to be
+compatible with the linking model of compartments.
+
+**Q**: Would this proposal enable the importing of other languages directly as
+modules?
 
 **A**: While hosts may define import reflection, expanding the evaluation of
-arbitrary language syntax to the web is not seen as a motivating use case for this proposal.
+arbitrary language syntax to the web is not seen as a motivating use case for
+this proposal.
 
-**Q**: Why not just use `const module = await WebAssembly.compileStreaming(fetch(new URL("./module.wasm", import.meta.url)));`?
+**Q**: Why not just use `const module = await
+WebAssembly.compileStreaming(fetch(new URL("./module.wasm",
+import.meta.url)));`?
 
-**A**: There are multiple benefits: firstly if the module is statically referenced in the module
-graph, it is easier to statically analyze (by bundlers for example). Secondly when using CSP,
-`script-src: unsafe-eval` would not be needed. See the security improvements section for more
-details.
+**A**: There are multiple benefits: firstly if the module is statically
+referenced in the module graph, it is easier to statically analyze (by bundlers
+for example). Secondly when using CSP, `script-src: unsafe-eval` would not be
+needed. See the security improvements section for more details.
+
+[CSP]:
+    https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy
+[Wasm components to be able to import]:
+    https://github.com/WebAssembly/component-model/blob/main/design/mvp/Explainer.md#ESM-integration
+[Wasm module object]:
+    https://webassembly.github.io/spec/js-api/index.html#modules
+[asset references proposal]: https://github.com/tc39/proposal-asset-references
+[compartments]: https://github.com/tc39/proposal-compartments
+[module-linking]:
+    https://github.com/WebAssembly/module-linking/blob/main/proposals/module-linking/Binary.md#import-section-updates
+[module blocks]: https://github.com/tc39/proposal-js-module-blocks
+[wasm-js-api]: https://webassembly.github.io/spec/js-api/#modules
+[wasm-esm]:
+    https://github.com/WebAssembly/esm-integration/tree/master/proposals/esm-integration
