@@ -2564,7 +2564,7 @@ li.menu-search-result-term:before {
             <var>promiseCapability</var>: a PromiseCapability Record,
             <var>innerPromise</var>: unknown,
           ): <emu-const>unused</emu-const>
-        </a></li></ol></li></ol></li><li><span class="item-toggle">◢</span><a href="#sec-imports" title="Imports"><span class="secnum">2.2</span> Imports</a><ol class="toc"><li><span class="item-toggle-none"></span><a href="#sec-static-semantics-importentries" title="Static Semantics: ImportEntries ( )"><span class="secnum">2.2.1</span> SS: ImportEntries ( )</a></li></ol></li></ol></li><li><span class="item-toggle-none"></span><a href="#sec-copyright-and-software-license" title="Copyright &amp; Software License"><span class="secnum">A</span> Copyright &amp; Software License</a></li></ol></div></div><div id="spec-container"><h1 class="version">Stage 1 Draft / July 6, 2022</h1><h1 class="title">Import Reflection</h1>
+        </a></li></ol></li></ol></li><li><span class="item-toggle">◢</span><a href="#sec-imports" title="Imports"><span class="secnum">2.2</span> Imports</a><ol class="toc"><li><span class="item-toggle-none"></span><a href="#sec-static-semantics-importentries" title="Static Semantics: ImportEntries ( )"><span class="secnum">2.2.1</span> SS: ImportEntries ( )</a></li></ol></li></ol></li><li><span class="item-toggle-none"></span><a href="#sec-copyright-and-software-license" title="Copyright &amp; Software License"><span class="secnum">A</span> Copyright &amp; Software License</a></li></ol></div></div><div id="spec-container"><h1 class="version">Stage 1 Draft / July 7, 2022</h1><h1 class="title">Import Reflection</h1>
 
 <emu-clause id="sec-ecmascript-language-expressions">
   <h1><span class="secnum">1</span> ECMAScript Language: Expressions</h1>
@@ -2936,6 +2936,9 @@ li.menu-search-result-term:before {
             Each time this operation is called with a specific <var>referencingScriptOrModule</var>, <var>specifier</var> pair as arguments it must return the same object if it completes normally.
           </li>
         </ul>
+        <emu-note><span class="note">Note</span><div class="note-contents">
+          <p>It is a TODO for this specification to further refine the <emu-xref href="#host"><a href="https://tc39.es/ecma262/#host">host</a></emu-xref> invariants for module reflection.</p>
+        </div></emu-note>
       </emu-clause>
 
       <emu-clause id="sec-hostimportmoduledynamically" type="host-defined abstract operation">

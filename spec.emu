@@ -424,6 +424,9 @@ contributors: Luca Casonato, Guy Bedford
             Each time this operation is called with a specific _referencingScriptOrModule_, _specifier_ pair as arguments it must return the same object if it completes normally.
           </li>
         </ul>
+        <emu-note>
+          <p>It is a TODO for this specification to further refine the host invariants for module reflection.</p>
+        </emu-note>
       </emu-clause>
 
       <emu-clause id="sec-hostimportmoduledynamically" type="host-defined abstract operation">
