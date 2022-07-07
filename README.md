@@ -105,18 +105,19 @@ In turn this enables [Wasm components to be able to import][]
 
 ### Other Module Types
 
-Other module types may define their own host reflections. Alternatively they may
-throw if there is no suitable reflection available.
+Other module types may define their own host reflections. A module reflection
+may fail during the linking phase if it depends on a reflected import that the
+host cannot satisfy for lack of an available reflection for the corresponding
+module type.
 
 ## Security Benefits
 
-The ability to relate a script or module to how it was obtained is an important
-security property on the web and other JS runtimes. [CSP][] is the most
-well-known web platform feature that allows you to limit the capabilities the
-platform grants to a given site.
+Tracking the origins of a scripts or modules is important for protecting
+programs from cross-site scripting attacks, for example using [Content Security
+Policies][CSP].
 
 A common use is to disallow dynamic code generation means like `eval`. Wasm
-compilation is unfortunatly completly dynamic right now (manual network fetch +
+compilation is unfortunately completly dynamic right now (manual network fetch +
 compile), so Wasm unconditionally requires a `script-src: unsafe-wasm-eval` CSP
 attribute.
 
@@ -130,9 +131,6 @@ This property does not just impact platforms using CSP, but also other platforms
 with systems to restrict permissions, such as Deno.
 
 ## Cache Key Semantics
-
-Semantically this proposal involves a relaxation of the
-`HostResolveImportedModule` idempotency requirement.
 
 The proposed approach would be a _clone_ behaviour, where imports to the same
 module of different reflection types result in separate keys. These semantics do
