@@ -405,10 +405,12 @@ contributors: Luca Casonato, Guy Bedford
 
       <emu-clause id="sec-hostresolvemodulereflection" type="host-defined abstract operation">
         <h1>
-          <ins>HostResolveModuleReflection (
-            _referencingScriptOrModule_: a Script Record, a Module Record, or *null*,
-            _specifier_: a |ModuleSpecifier| String,
-          ): either a normal completion containing an Object or a throw completion</ins>
+          <ins>
+            HostResolveModuleReflection (
+              _referencingScriptOrModule_: a Script Record a Module Record or *null*,
+              _specifier_: a |ModuleSpecifier| String,
+            ): either a normal completion containing an Object or a throw completion
+          </ins>
         </h1>
         <dl class="header">
           <dt>description</dt>
