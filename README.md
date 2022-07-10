@@ -14,13 +14,17 @@ For both JavaScript and WebAssembly, there is a need to be able to more closely
 customize the loading, linking, and execution of modules beyond the standard
 host execution model.
 
-For WebAssembly, imports and exports for WebAssembly models often require custom
-inspection and wrapping in order to behave correctly, which can be better
-provided via manual instantiation than relying directly on the base [ESM
-integration][wasm-esm] proposal.
-
 For JavaScript, creating userland loaders would require a module reflection type
 in order to share the host parsing, execution, security, and caching semantics.
+
+For WebAssembly, imports and exports for WebAssembly modules often require custom
+inspection and wrapping in order to be set up correctly, which typically requires
+manual instantiation work that would not necessarily be straightforward or
+possible under the proposed host [ESM integration][wasm-esm] proposal.
+
+Supporting module reflections syntactically as a new import form creates a
+primitive that can extend the static, security and tooling benefits of modules
+from the ESM integration to these dynamic instantiation use cases.
 
 ## Proposal
 
@@ -97,8 +101,8 @@ wasi.start(fooInstance);
 ```
 
 The static analysis benefits of not needing a custom `fetch` and
-`WebAssembly.compileStreaming` benefit not only code analysis and security but
-also bundlers.
+`WebAssembly.compileStreaming` apply not only to code analysis and security
+but also for bundlers.
 
 In turn this enables [Wasm components to be able to import][]
 `WebAssembly.Module` objects themselves in future.
@@ -112,19 +116,20 @@ module type.
 
 ## Security Benefits
 
-Tracking the origins of a scripts or modules is important for protecting
-programs from cross-site scripting attacks, for example using [Content Security
-Policies][CSP].
+Tracking the origins of scripts or modules is important for protecting programs
+from cross-site scripting attacks, for example using [Content Security
+Policies][CSP]. Extending this behaviour to dynamic module reflections enables
+custom loaders while retaining these security benefits.
 
-A common use is to disallow dynamic code generation means like `eval`. Wasm
-compilation is unfortunately completly dynamic right now (manual network fetch +
-compile), so Wasm unconditionally requires a `script-src: unsafe-wasm-eval` CSP
-attribute.
+Wasm compilation is unfortunately completely dynamic right now (manual network
+fetch & compile), so Wasm unconditionally requires a
+`script-src: unsafe-wasm-eval` CSP attribute.
 
-With this proposal, the Wasm module would be known statically, so would not have
-to be considered as dynamic code generation. This would allow the web platform
-to lift this restriction for statically imported Wasm modules, and instead just
-require `script-src: self` (or possibly `wasm-src: self`) like for JS. Also see
+With this proposal, the JS and Wasm module reflections would be known statically,
+so would not have to be considered as dynamic code generation. This would allow
+the web platform to enabling dynamic instantiation for these modules while
+lifting the restriction of an arbitrary evaluation CSP policy and instead just
+require `script-src: self` (or `wasm-src: self`). Also see
 https://github.com/WebAssembly/esm-integration/issues/56.
 
 This property does not just impact platforms using CSP, but also other platforms
@@ -167,15 +172,10 @@ and they do not influence the HostResolveImportedModule idempotency
 requirements. This proposal does. Also see
 https://github.com/tc39/proposal-import-assertions#follow-up-proposal-evaluator-attributes.
 
-**Q**: How does this relate to module blocks?
+**Q**: How does this relate to module blocks and compartments?
 
 **A**: The module object that is reflected should be specified here to be
-compatible with the linking model of module blocks.
-
-**Q**: How does this relate to compartments?
-
-**A**: The module object that is reflected should be specified here to be
-compatible with the linking model of compartments.
+compatible with the linking model of module blocks and compartments.
 
 **Q**: Would this proposal enable the importing of other languages directly as
 modules?
