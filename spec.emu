@@ -37,7 +37,7 @@ contributors: Luca Casonato, Guy Bedford
             1. Let _reflection_ be Get(_options_, *"reflect"*).
             1. IfAbruptRejectPromise(_reflection_, _promiseCapability_).
             1. If _reflection_ is not *undefined*,
-              1. If _reflection is not `"module"`, then
+              1. If _reflection_ is not `"module"`, then
                 1. Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, &laquo; a newly created *TypeError* object &raquo;).
                 1. Return _promiseCapability_.[[Promise]].
           1. Perform HostImportModuleDynamically(_referencingScriptOrModule_, _specifierString_, _reflection_, _promiseCapability_).
