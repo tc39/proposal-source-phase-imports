@@ -6,7 +6,9 @@ Champion(s): Luca Casonato, Guy Bedford
 
 Author(s): Luca Casonato, Guy Bedford
 
-Stage: 1
+Stage: 2
+
+Stage 3 reviewers: Daniel Ehrenberg, Kris Kowal
 
 ## Motivation
 
