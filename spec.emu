@@ -43,8 +43,9 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
         1. <ins>Return EvaluateImportCall(_specifier_, _options_).</ins>
       </emu-alg>
 
-      <emu-clause id="sec-evaluate-import-call">
+      <emu-clause id="sec-evaluate-import-call" type="abstract operation">
         <h1><ins>EvaluateImportCall ( _specifier_ , _options_ )</ins></h1>
+        <dl class="header"></dl>
         <emu-alg>
           1. Let _referrer_ be GetActiveScriptOrModule().
           1. If _referrer_ is *null*, set _referrer_ to the current Realm Record.
