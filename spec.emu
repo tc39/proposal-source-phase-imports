@@ -297,6 +297,23 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
             </tr>
             <tr>
               <td>
+                <ins>[[ModuleSourceObject]]</ins>
+              </td>
+              <td>
+                <ins>an Object or *null* (defaults to *null*)</ins>
+              </td>
+              <td>
+                <ins>An Object corresponding to the source Module Record.</ins>
+
+                <emu-note type="editor">
+                  <p>This concept is better explained by <a href="https://tc39.es/proposal-compartments/0-module-and-module-source.html">Layer 0</a> and <a href="https://github.com/tc39/proposal-compartments/blob/master/2-virtual-module-source.md">Layer 2</a> of the Compartments proposal.</p>
+
+                  <p>This proposal only used [[ModuleSourceObject]] to implement a rudimental version of the <a href="#sec-module.prototype.source">Module.prototype.source</a> accessor, which returns the [[ModuleSourceObject]] defined by the host in custom Module Records (such as WebAssembly Module Records).</p>
+                </emu-note>
+              </td>
+            </tr>
+            <tr>
+              <td>
                 [[HostDefined]]
               </td>
               <td>
@@ -640,8 +657,12 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
               1. Else,
                 1. Append _ee_ to _indirectExportEntries_.
             1. Let _async_ be _body_ Contains `await`.
-            1. Return Source Text Module Record { [[Realm]]: _realm_, [[Environment]]: ~empty~, [[Namespace]]: ~empty~, [[CycleRoot]]: ~empty~, [[HasTLA]]: _async_, [[AsyncEvaluation]]: *false*, [[TopLevelCapability]]: ~empty~, [[AsyncParentModules]]: &laquo; &raquo;, [[PendingAsyncDependencies]]: ~empty~, [[Status]]: ~new~, [[EvaluationError]]: ~empty~, [[HostDefined]]: _hostDefined_, [[ECMAScriptCode]]: _body_, [[Context]]: ~empty~, [[ImportMeta]]: ~empty~, [[RequestedModules]]: _requestedModules_, <ins>[[RequestedModuleObjects]]: _requestedModuleObjects_,</ins> [[LoadedModules]]: a new empty List, [[ImportEntries]]: _importEntries_, [[LocalExportEntries]]: _localExportEntries_, [[IndirectExportEntries]]: _indirectExportEntries_, [[StarExportEntries]]: _starExportEntries_, [[DFSIndex]]: ~empty~, [[DFSAncestorIndex]]: ~empty~ }.
+            1. Return Source Text Module Record { [[Realm]]: _realm_, [[Environment]]: ~empty~, [[Namespace]]: ~empty~, [[CycleRoot]]: ~empty~, [[HasTLA]]: _async_, [[AsyncEvaluation]]: *false*, [[TopLevelCapability]]: ~empty~, [[AsyncParentModules]]: &laquo; &raquo;, [[PendingAsyncDependencies]]: ~empty~, [[Status]]: ~new~, [[EvaluationError]]: ~empty~, [[HostDefined]]: _hostDefined_, [[ECMAScriptCode]]: _body_, [[Context]]: ~empty~, [[ImportMeta]]: ~empty~, [[RequestedModules]]: _requestedModules_, <ins>[[RequestedModuleObjects]]: _requestedModuleObjects_,</ins> [[LoadedModules]]: a new empty List, [[ImportEntries]]: _importEntries_, [[LocalExportEntries]]: _localExportEntries_, [[IndirectExportEntries]]: _indirectExportEntries_, [[StarExportEntries]]: _starExportEntries_, [[DFSIndex]]: ~empty~, [[DFSAncestorIndex]]: ~empty~, <ins>[[ModuleObject]]: ~empty~, [[ModuleSourceObject]]: *null*</ins> }.
           </emu-alg>
+
+          <emu-note type="editor">
+            <a href="https://tc39.es/proposal-compartments/0-module-and-module-source.html">Layer 0 of the Compartments proposal</a> defines ModuleSource objects, which would be used here as the [[ModuleSourceObject]] of Source Text Module Records.
+          </emu-note>
         </emu-clause>
 
         <emu-clause id="sec-source-text-module-record-initialize-environment" type="concrete method">
@@ -835,6 +856,10 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
   <emu-clause id="sec-module-objects" number="6">
     <h1><ins>Module Objects</ins></h1>
 
+    <emu-note type="editor">
+      Module Objects are fully defined by <a href="https://tc39.es/proposal-compartments/0-module-and-module-source.html">Layer 0 of the Compartments proposal</a>. This section only includes the minimum set of features necessary to satisfy the goals of this proposal.
+    </emu-note>
+
     <emu-clause id="sec-module-constructor">
       <h1><ins>The Module Constructor</ins></h1>
       <p>The Module constructor:</p>
@@ -868,12 +893,18 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
         <li>is an ordinary object.</li>
       </ul>
 
-      <emu-clause id="sec-module.prototype.tostring">
-        <h1><ins>Module.prototype.toString ( )</ins></h1>
+      <emu-clause id="sec-module.prototype.source">
+        <h1><ins>get Module.prototype.source ( )</ins></h1>
         <p>The following steps are taken:</p>
         <emu-alg>
-          1. Throw a *TypeError* exception.
+          1. Let _moduleObject_ be the *this* value.
+          1. If Type(_moduleObject_) is not Object or _moduleObject_ does not have an internal slot [[ModuleRecord]], throw a new *TypeError* exception.
+          1. Return _module_.[[ModuleRecord]].[[ModuleSourceObject]].
         </emu-alg>
+
+        <emu-note type="editor">
+          <p>This method is necessary to allow importing `WebAssembly.Module` objects, which are the source of WebAssembly modules reified as Module Objects. Even without this accessor, this proposal allows loading single modules that can later be linked and evaluated using dynamic `import()`.</p>
+        </emu-note>
       </emu-clause>
     </emu-clause>
 
