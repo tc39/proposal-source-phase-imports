@@ -381,7 +381,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
                 a List of Strings
               </td>
               <td>
-                A List of all the |ModuleSpecifier| strings used by the module represented by this record to request the importation of a module<ins>, excluding the |ModuleSpecifier| strings that have been imported exclusively using <code>import module</code> declarations</ins>. The List is source text occurrence ordered.
+                A List of all the |ModuleSpecifier| strings used by the module represented by this record to request the importation of a module. The List is source text occurrence ordered.
               </td>
             </tr>
             <tr>
@@ -499,10 +499,9 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
                 1. Append _module_ to _state_.[[Visited]].
                 1. Let _requestedModulesCount_ be the length of _module_.[[RequestedModules]].
                 1. Set _state_.[[PendingModulesCount]] to _state_.[[PendingModulesCount]] + _requestedModulesCount_.
-                1. <ins>Let _allRequestedModules_ be the list-concatenation of _module_.[[RequestedModules]] and _module_.[[RequestedModuleReflections]].</ins>
-                1. For each String _required_ of <del>_module_.[[RequestedModules]]</del><ins>_allRequestedModules_</ins>, do
+                1. For each String _required_ of _module_.[[RequestedModules]], do
                   1. If _module_.[[LoadedModules]] contains a Record _record_ whose [[Specifier]] is _required_, then
-                    1. Perform InnerModuleLoading(_state_, <ins>_module_, _required_,</ins> _record_.[[Module]]).
+                    1. Perform InnerModuleLoading(_state_, _record_.[[Module]], <ins>_module_, _required_</ins>).
                   1. Else,
                     1. Perform HostLoadImportedModule(_module_, _required_, _state_.[[HostDefined]], _state_).
                     1. NOTE: HostLoadImportedModule will call FinishLoadingImportedModule, which re-enters the graph loading process through ContinueModuleLoading.
@@ -535,7 +534,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
             <emu-alg>
               1. If _state_.[[IsLoading]] is *false*, return ~unused~.
               1. If _moduleCompletion_ is a normal completion, then
-                1. Perform InnerModuleLoading(_state_, <ins>_referrer_, _specifier_,</ins> _moduleCompletion_.[[Value]]).
+                1. Perform InnerModuleLoading(_state_, _moduleCompletion_.[[Value]], <ins>_referrer_, _specifier_</ins>).
               1. Else,
                 1. Set _state_.[[IsLoading]] to *false*.
                 1. Perform ! Call(_state_.[[PromiseCapability]].[[Reject]], *undefined*, &laquo; _moduleCompletion_.[[Value]] &raquo;).
@@ -614,9 +613,9 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
           <emu-alg>
             1. Let _body_ be ParseText(_sourceText_, |Module|).
             1. If _body_ is a List of errors, return _body_.
-            1. Let _requestedModules_ be the ModuleRequests of _body_ <ins>with argument *true*</ins>.
-            1. <ins>Let _allRequestedModules_ be the ModuleRequests of _body_.</ins>
-            1. <ins>Let _requestedModuleReflections_ be a new List containing the elements of _allRequestedModules_ that are not in _requestedModules_.</ins>
+            1. Let _requestedModules_ be the ModuleRequests of _body_.
+            1. <ins>Let _recursiveRequestedModules_ be the ModuleRequests of _body_ with argument *true*</ins>.
+            1. <ins>Let _requestedModuleReflections_ be a list containing the elements of _requestedModules_ that are not elements of _recursiveRequestedModules_
             1. Let _importEntries_ be ImportEntries of _body_.
             1. Let _importedBoundNames_ be ImportedLocalNames(_importEntries_).
             1. Let _indirectExportEntries_ be a new empty List.
