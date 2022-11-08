@@ -386,13 +386,19 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
             </tr>
             <tr>
               <td>
-                <ins>[[RequestedModuleReflections]]</ins>
+                <ins>[[RequestedModuleReflectionsOnly]]</ins>
               </td>
               <td>
                 <ins>a List of Strings</ins>
               </td>
               <td>
                 <ins>a List of all the |ModuleSpecifier| strings that have been imported exclusively using <code>import module</code> declarations, and thus that shouldn't be recursively loaded.</ins>
+
+                <emu-note>
+                  <p>For example, given this code:</p>
+                  <pre><code class="javascript">import "A";</code><code class="javascript">import module A from "A";</code><code class="javascript">import module B from "B";</code></pre>
+                  <p>[[RequestedModuleReflectionsOnly]] is « `"C"` ».</p>
+                </emu-note>
               </td>
             </tr>
             <tr>
@@ -494,7 +500,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
               1. <ins>Let _importOnlyAsReflection_ be *false*.</ins>
               1. <ins>If _referrer_ has been specified, then</ins>
                 1. <ins>Assert: _specifier_ has been specified.</ins>
-                1. <ins>If _referrer_.[[RequestedModuleReflections]] contains _specifier_, set _importOnlyAsReflection_ to *true*.</ins>
+                1. <ins>If _referrer_.[[RequestedModuleReflectionsOnly]] contains _specifier_, set _importOnlyAsReflection_ to *true*.</ins>
               1. If <ins>_importOnlyAsReflection_ is *false*,</ins> _module_ is a Cyclic Module Record, _module_.[[Status]] is ~new~, and _state_.[[Visited]] does not contain _module_, then
                 1. Append _module_ to _state_.[[Visited]].
                 1. Let _requestedModulesCount_ be the length of _module_.[[RequestedModules]].
@@ -615,7 +621,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
             1. If _body_ is a List of errors, return _body_.
             1. Let _requestedModules_ be the ModuleRequests of _body_.
             1. <ins>Let _recursiveRequestedModules_ be the ModuleRequests of _body_ with argument *true*</ins>.
-            1. <ins>Let _requestedModuleReflections_ be a list containing the elements of _requestedModules_ that are not elements of _recursiveRequestedModules_
+            1. <ins>Let _requestedModuleReflectionsOnly_ be a list containing the elements of _requestedModules_ that are not elements of _recursiveRequestedModules_
             1. Let _importEntries_ be ImportEntries of _body_.
             1. Let _importedBoundNames_ be ImportedLocalNames(_importEntries_).
             1. Let _indirectExportEntries_ be a new empty List.
@@ -640,7 +646,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
               1. Else,
                 1. Append _ee_ to _indirectExportEntries_.
             1. Let _async_ be _body_ Contains `await`.
-            1. Return Source Text Module Record { [[Realm]]: _realm_, [[Environment]]: ~empty~, [[Namespace]]: ~empty~, [[CycleRoot]]: ~empty~, [[HasTLA]]: _async_, [[AsyncEvaluation]]: *false*, [[TopLevelCapability]]: ~empty~, [[AsyncParentModules]]: &laquo; &raquo;, [[PendingAsyncDependencies]]: ~empty~, [[Status]]: ~new~, [[EvaluationError]]: ~empty~, [[HostDefined]]: _hostDefined_, [[ECMAScriptCode]]: _body_, [[Context]]: ~empty~, [[ImportMeta]]: ~empty~, [[RequestedModules]]: _requestedModules_, <ins>[[RequestedModuleReflections]]: _requestedModuleReflections_,</ins> [[LoadedModules]]: a new empty List, [[ImportEntries]]: _importEntries_, [[LocalExportEntries]]: _localExportEntries_, [[IndirectExportEntries]]: _indirectExportEntries_, [[StarExportEntries]]: _starExportEntries_, [[DFSIndex]]: ~empty~, [[DFSAncestorIndex]]: ~empty~, <ins>[[ModuleSourceObject]]: *null*</ins> }.
+            1. Return Source Text Module Record { [[Realm]]: _realm_, [[Environment]]: ~empty~, [[Namespace]]: ~empty~, [[CycleRoot]]: ~empty~, [[HasTLA]]: _async_, [[AsyncEvaluation]]: *false*, [[TopLevelCapability]]: ~empty~, [[AsyncParentModules]]: &laquo; &raquo;, [[PendingAsyncDependencies]]: ~empty~, [[Status]]: ~new~, [[EvaluationError]]: ~empty~, [[HostDefined]]: _hostDefined_, [[ECMAScriptCode]]: _body_, [[Context]]: ~empty~, [[ImportMeta]]: ~empty~, [[RequestedModules]]: _requestedModules_, <ins>[[RequestedModuleReflectionsOnly]]: _requestedModuleReflectionsOnly_,</ins> [[LoadedModules]]: a new empty List, [[ImportEntries]]: _importEntries_, [[LocalExportEntries]]: _localExportEntries_, [[IndirectExportEntries]]: _indirectExportEntries_, [[StarExportEntries]]: _starExportEntries_, [[DFSIndex]]: ~empty~, [[DFSAncestorIndex]]: ~empty~, <ins>[[ModuleSourceObject]]: *null*</ins> }.
           </emu-alg>
 
           <emu-note type="editor">
