@@ -128,6 +128,8 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
             1. Return ~unused~.
           1. Let _module_ be _moduleCompletion_.[[Value]].
           1. <ins>If _state_.[[ModuleReflection]] is *true*, then</ins>
+            1. <ins>If _moduleSourceObject_ is *null*, then</ins>
+              1. <ins>Throw a *TypeError* exception.
             1. <ins>Let _moduleSourceObject_ be _module_.[[ModuleSourceObject]].</ins>
             1. <ins>Perform ! Call(_promiseCapability_.[[Resolve]], *undefined*, &laquo; _moduleSourceObject_ &raquo;).</ins>
             1. <ins>Return ~unused~.</ins>
@@ -291,6 +293,8 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
 
                 <emu-note type="editor">
                   <p>This concept is better explained by <a href="https://tc39.es/proposal-compartments/0-module-and-module-source.html">Layer 0</a> and <a href="https://github.com/tc39/proposal-compartments/blob/master/2-virtual-module-source.md">Layer 2</a> of the Compartments proposal.</p>
+
+                  <p>The *null* default will throw an error for unsupported reflections (including for SourceTextModuleRecord).</p>
 
                   <p>For <a href="https://webassembly.github.io/esm-integration/js-api/index.html#esm-integration">WebAssembly modules</a>, this field should contain the corresponding `WebAssembly.Module` object.</p>
                 </emu-note>

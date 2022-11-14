@@ -4,7 +4,7 @@
 
 Champion(s): Luca Casonato, Guy Bedford
 
-Author(s): Luca Casonato, Guy Bedford
+Author(s): Luca Casonato, Guy Bedford, Nicolo Ribaudo
 
 Stage: 2
 
@@ -21,8 +21,8 @@ in order to share the host parsing, execution, security, and caching semantics.
 
 For WebAssembly, imports and exports for WebAssembly modules often require custom
 inspection and wrapping in order to be set up correctly, which typically requires
-manual instantiation work that would not necessarily be straightforward or
-possible under the proposed host [ESM integration][wasm-esm] proposal.
+manual fetch and instantiation work that is not provided for in the current host
+[ESM integration][wasm-esm] proposal.
 
 Supporting module reflections syntactically as a new import form creates a
 primitive that can extend the static, security and tooling benefits of modules
@@ -62,14 +62,22 @@ await import("<specifier>", { reflect: "asset" });
 
 Only the `module` reflection is specified by this proposal.
 
+### Defining Reflection
+
+Reflection is defined through the [ECMA-262 ES modules HostLoadImportedModule refactoring][],
+which permits moves the construction of module records to the host, and on which
+we can define a `[[ModuleSourceObject]]` custom object to be returned by module reflection that is
+compatible both with compartments and import reflection.
+
 ### JS Reflection
 
-The type of the reflection object for a JavaScript module is currently
-host-defined, but the goal would be for this to be defined to be an object that
-is compatible with objects defined by the [module blocks][] and the
-[compartments][] specifications.
+The type of the reflection object for a JavaScript module is would depend
+on the [compartments][] specification. It could possibly be initial specified
+in this proposal and extended by the compartments proposal or it could entirely
+be specified in the compartments proposal.
 
-Specifying this object remains a TODO item for the proposal.
+In the current specification, the JS reflection case just throws an error
+to support this as a future addition.
 
 ### Wasm Reflection
 
@@ -82,7 +90,7 @@ still being able to support the same CSP policy as the native [ESM
 integration][wasm-esm], avoiding the need for `unsafe-wasm-eval` for custom Wasm
 execution.
 
-Since reflection is defined through a host hook, this Wasm reflection is left to
+Since reflection is defined through the hook, this Wasm reflection is left to
 be specified in the Wasm [ESM Integration][wasm-esm].
 
 This allows workflows, as explained in the motivation, like the following:
@@ -111,10 +119,8 @@ In turn this enables [Wasm components to be able to import][]
 
 ### Other Module Types
 
-Other module types may define their own host reflections. A module reflection
-may fail during the linking phase if it depends on a reflected import that the
-host cannot satisfy for lack of an available reflection for the corresponding
-module type.
+Other module types may define their own host reflections. If no module reflection
+is defined, it will fail during the loading phase.
 
 ## Security Benefits
 
@@ -139,31 +145,8 @@ with systems to restrict permissions, such as Deno.
 
 ## Cache Key Semantics
 
-The proposed approach would be a _clone_ behaviour, where imports to the same
-module of different reflection types result in separate keys. These semantics do
-run counter to the intuition that there is just one copy of a module.
-
-The specification would then split the `HostResolveImportedModule` hook into two
-components - module asset resolution, and module asset interpretation. The
-module asset resolution component would retain the exact same idempotency
-requirement, while the module asset interpretation component would have
-idempotency down to keying on the module asset and reflection type pair.
-
-Effectively, this splits the module cache into two separate caches - an asset
-cache retaining the current idempotency of the `HostResolveImportedModule` host
-hook, pointing to an opaque cached asset reference, and a module instance cache,
-keyed by this opaque asset reference and the reflection type.
-
-Alternative proposals include:
-
-- **Race** and use the attribute that was requested by the first import. This
-  seems broken in that the second usage is ignored.
-- **Reject** the module graph and don't load if attributes differ. This seems
-  bad for composition--using two unrelated packages together could break, if
-  they load the same module with disagreeing attributes.
-
-Both of these alternatives seem less versatile than the proposed _clone_
-behaviour above.
+Because `[[ModuleSourceObject]]` is keyed on the base module record, it will always
+be unique to the module being imported from.
 
 ## Q&A
 
@@ -174,10 +157,10 @@ and they do not influence the HostResolveImportedModule idempotency
 requirements. This proposal does. Also see
 https://github.com/tc39/proposal-import-assertions#follow-up-proposal-evaluator-attributes.
 
-**Q**: How does this relate to module blocks and compartments?
+**Q**: How does this relate to module expressions and compartments?
 
-**A**: The module object that is reflected should be specified here to be
-compatible with the linking model of module blocks and compartments.
+**A**: The module object that is reflected has been carefully specified here to be
+compatible with the linking model of module expressions and compartments.
 
 **Q**: Would this proposal enable the importing of other languages directly as
 modules?
@@ -197,6 +180,8 @@ needed. See the security improvements section for more details.
 
 [CSP]:
     https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy
+[ECMA-262 ES modules HostLoadImportedModule refactoring]:
+    https://github.com/tc39/ecma262/pull/2905
 [Wasm components to be able to import]:
     https://github.com/WebAssembly/component-model/blob/main/design/mvp/Explainer.md#ESM-integration
 [Wasm module object]:
@@ -205,7 +190,7 @@ needed. See the security improvements section for more details.
 [compartments]: https://github.com/tc39/proposal-compartments
 [module-linking]:
     https://github.com/WebAssembly/module-linking/blob/main/proposals/module-linking/Binary.md#import-section-updates
-[module blocks]: https://github.com/tc39/proposal-js-module-blocks
+[module expressions]: https://github.com/tc39/proposal-module-expressions
 [wasm-js-api]: https://webassembly.github.io/spec/js-api/#modules
 [wasm-esm]:
     https://github.com/WebAssembly/esm-integration/tree/master/proposals/esm-integration
