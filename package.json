@@ -5,7 +5,7 @@
   "scripts": {
     "start": "npm run build-loose -- --watch",
     "build": "npm run build-loose -- --strict",
-    "build-loose": "ecmarkup --load-biblio @tc39/ecma262-biblio --verbose spec.emu index.html"
+    "build-loose": "ecmarkup --load-biblio ./ecma262-biblio.json --verbose spec.emu index.html"
   },
   "homepage": "https://github.com/tc39/proposal-import-reflection#readme",
   "repository": {
@@ -14,7 +14,7 @@
   },
   "license": "MIT",
   "devDependencies": {
-    "@tc39/ecma262-biblio": "2.0.2332",
-    "ecmarkup": "^12.1.1"
+    "@tc39/ecma262-biblio": "2.1.2462",
+    "ecmarkup": "^15.0.4"
   }
 }
