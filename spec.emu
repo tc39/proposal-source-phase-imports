@@ -128,9 +128,10 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
             1. Return ~unused~.
           1. Let _module_ be _moduleCompletion_.[[Value]].
           1. <ins>If _state_.[[ModuleReflection]] is *true*, then</ins>
-            1. <ins>If _moduleSourceObject_ is *null*, then</ins>
-              1. <ins>Throw a *TypeError* exception.
             1. <ins>Let _moduleSourceObject_ be _module_.[[ModuleSourceObject]].</ins>
+            1. <ins>If _moduleSourceObject_ is *null*, then</ins>
+              1. <ins>Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, &laquo; a newly created *TypeError* object &raquo;).</ins>
+              1. <ins>Return ~unused~.</ins>
             1. <ins>Perform ! Call(_promiseCapability_.[[Resolve]], *undefined*, &laquo; _moduleSourceObject_ &raquo;).</ins>
             1. <ins>Return ~unused~.</ins>
           1. Let _loadPromise_ be _module_.LoadRequestedModules().
@@ -683,6 +684,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
                 1. Perform ! _env_.InitializeBinding(_in_.[[LocalName]], _namespace_).
               1. <ins>Else if _in_.[[ImportName]] is ~module~, then</ins>
                 1. <ins>Let _moduleSourceObject_ be _importedModule_.[[ModuleSourceObject]].</ins>
+                1. <ins>If _moduleSourceObject_ is *null*, throw a *TypeError* exception.</ins>
                 1. <ins>Perform ! _env_.CreateImmutableBinding(_in_.[[LocalName]], *true*).</ins>
                 1. <ins>Perform ! _env_.InitializeBinding(_in_.[[LocalName]], _moduleSourceObject_).</ins>
               1. Else,
