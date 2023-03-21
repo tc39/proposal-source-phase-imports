@@ -50,7 +50,7 @@ const x = await import("<specifier>", { reflect: "module" });
 ```
 
 For dynamic imports, import source reflection is specified in the same second
-attribute options bag that import assertions are specified in, using the
+attribute options bag that [import assertions]() are specified in, using the
 `reflect` key.
 
 ### Evaluator Phase Reflection
@@ -156,10 +156,11 @@ be unique to the module being imported from.
 
 ## Q&A
 
-**Q**: How does this relate to evaluator attributes?
+**Q**: How does this relate to import assertions / evaluator attributes?
 
-**A**: Evaluator attributes affect the module request, while phase reflections
-do not affect the interpretation or idempotency of the module load.
+**A**: Import assertions are properties of the module request, while phase reflections
+represent phases of that specific request / key in the module map, without affecting
+the idempotency of the module load.
 
 **Q**: How does this relate to module expressions and compartments?
 
@@ -192,6 +193,7 @@ needed. See the security improvements section for more details.
     https://webassembly.github.io/spec/js-api/index.html#modules
 [asset references proposal]: https://github.com/tc39/proposal-asset-references
 [compartments]: https://github.com/tc39/proposal-compartments
+[import assertions]: https://github.com/tc39/proposal-import-assertions/
 [module-linking]:
     https://github.com/WebAssembly/module-linking/blob/main/proposals/module-linking/Binary.md#import-section-updates
 [module expressions]: https://github.com/tc39/proposal-module-expressions
