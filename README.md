@@ -79,7 +79,7 @@ compatible with module expressions and import reflection.
 ### JS Reflection
 
 The type of the reflection object for a JavaScript module is would depend
-on the [module source]()
+on the [module source][]
 specification.
 
 In the current specification, the JS reflection case just throws an error
