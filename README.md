@@ -1,4 +1,4 @@
-# Import Reflection
+# Import Source Reflection
 
 ## Status
 
@@ -16,7 +16,7 @@ For both JavaScript and WebAssembly, there is a need to be able to more closely
 customize the loading, linking, and execution of modules beyond the standard
 host execution model.
 
-For JavaScript, creating userland loaders would require a module reflection type
+For JavaScript, creating userland loaders would require a source reflection type
 in order to share the host parsing, execution, security, and caching semantics.
 
 For WebAssembly, imports and exports for WebAssembly modules often require custom
@@ -24,7 +24,7 @@ inspection and wrapping in order to be set up correctly, which typically require
 manual fetch and instantiation work that is not provided for in the current host
 [ESM integration][wasm-esm] proposal.
 
-Supporting module reflections syntactically as a new import form creates a
+Supporting syntactical source reflection as a  as a new import form creates a
 primitive that can extend the static, security and tooling benefits of modules
 from the ESM integration to these dynamic instantiation use cases.
 
@@ -37,7 +37,8 @@ compiled source of a module when the host provides such a representation:
 import module x from "<specifier>";
 ```
 
-The `module` reflection type is added to the beginning of the ImportStatement.
+The `module` source phase reflection type is added to the beginning of the
+ImportStatement.
 
 Only the above form is supported - named exports and unbound declarations are
 not supported.
@@ -48,33 +49,38 @@ not supported.
 const x = await import("<specifier>", { reflect: "module" });
 ```
 
-For dynamic imports, module import reflection is specified in the same second
+For dynamic imports, import source reflection is specified in the same second
 attribute options bag that import assertions are specified in, using the
 `reflect` key.
 
-If the [asset references proposal][] advances in future it could share this same
-`reflect` key for dynamic asset imports as being symmetrical reflections:
+### Evaluator Phase Reflection
+
+Import source reflection can be seen to be one type of evaluator phase
+reflection.
+
+If the [asset references proposal][] advances in future this could be seen
+as another type of phase reflection representing an earlier phase of the
+loading process.
 
 ```js
 import asset x from "<specifier>";
 await import("<specifier>", { reflect: "asset" });
 ```
 
-Only the `module` reflection is specified by this proposal.
+Only the `module` import source reflection is specified by this proposal.
 
 ### Defining Reflection
 
-Reflection is defined through the [ECMA-262 ES modules HostLoadImportedModule refactoring][],
+Source reflection is defined through the [ECMA-262 ES modules HostLoadImportedModule refactoring][],
 which permits moves the construction of module records to the host, and on which
 we can define a `[[ModuleSourceObject]]` custom object to be returned by module reflection that is
-compatible both with compartments and import reflection.
+compatible with module expressions and import reflection.
 
 ### JS Reflection
 
 The type of the reflection object for a JavaScript module is would depend
-on the [compartments][] specification. It could possibly be initial specified
-in this proposal and extended by the compartments proposal or it could entirely
-be specified in the compartments proposal.
+on the [module source]()
+specification.
 
 In the current specification, the JS reflection case just throws an error
 to support this as a future addition.
@@ -150,12 +156,10 @@ be unique to the module being imported from.
 
 ## Q&A
 
-**Q**: How does this relate to import assertions?
+**Q**: How does this relate to evaluator attributes?
 
-**A**: Import assertions do not influence how an imported asset is evaluated,
-and they do not influence the HostResolveImportedModule idempotency
-requirements. This proposal does. Also see
-https://github.com/tc39/proposal-import-assertions#follow-up-proposal-evaluator-attributes.
+**A**: Evaluator attributes affect the module request, while phase reflections
+do not affect the interpretation or idempotency of the module load.
 
 **Q**: How does this relate to module expressions and compartments?
 
@@ -191,6 +195,7 @@ needed. See the security improvements section for more details.
 [module-linking]:
     https://github.com/WebAssembly/module-linking/blob/main/proposals/module-linking/Binary.md#import-section-updates
 [module expressions]: https://github.com/tc39/proposal-module-expressions
+[module source]: https://github.com/tc39/proposal-compartments/blob/master/0-module-and-module-source.md#modulesource
 [wasm-js-api]: https://webassembly.github.io/spec/js-api/#modules
 [wasm-esm]:
     https://github.com/WebAssembly/esm-integration/tree/master/proposals/esm-integration
