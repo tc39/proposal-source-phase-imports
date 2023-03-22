@@ -50,7 +50,7 @@ const x = await import("<specifier>", { phase: "source" });
 ```
 
 For dynamic imports, import phase is specified in the same second
-attribute options bag that [import assertions]() are specified in, using the
+attribute options bag that [import assertions][] are specified in, using the
 `phase` key.
 
 ### Loading Phase
