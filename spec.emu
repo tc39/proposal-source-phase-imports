@@ -860,7 +860,6 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
         <emu-alg>
           1. Throw a *TypeError* exception.
         </emu-alg>
-        <p>The *"length"* property of this function is *+0*<sub>𝔽</sub>.</p>
       </emu-clause>
 
       <emu-note>
