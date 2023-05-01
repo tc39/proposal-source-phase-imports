@@ -1,4 +1,4 @@
-# Module Source Imports
+# Import Source Reflection
 
 ## Status
 
@@ -70,7 +70,7 @@ Only the `source` import source phase is specified by this proposal.
 ### Defining Module Source
 
 The object provided by the module source phase must be a subclass of the
-`GenericModuleSource` object, defined by this specification to be a minimal
+`AbstractModuleSource` object, defined by this specification to be a minimal
 object representation for a compiled modular resource.
 
 ### JS Module Source
@@ -79,7 +79,7 @@ For JavaScript modules, the module source phase is then specified to return
 a `ModuleSource` object:
 
 ```
-class ModuleSource extends GenericModuleSource {
+class ModuleSource extends AbstractModuleSource {
   constructor () {
     throw new Error();
   }
@@ -100,7 +100,7 @@ the [ModuleSource constructor][] and [instantiation][] support.
 ### Wasm Module Source
 
 For WebAssembly modules, the existing `WebAssembly.Module` object is to be
-updated to be a subclass of `GenericModuleSource` in the
+updated to be a subclass of `AbstractModuleSource` in the
 [WebAssembly JS integration API][wasm-js-api].
 
 The existing value for `toStringTag` of `WebAssembly.Module` would remain.

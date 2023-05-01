@@ -4,7 +4,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/8.4/styles/github.min.css">
 <script src="./spec.js"></script>
 <pre class="metadata">
-title: Module Source Imports
+title: Import Source Reflection
 stage: 1
 contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
 </pre>
@@ -290,7 +290,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
                 <ins>an Object or *null* (defaults to *null*)</ins>
               </td>
               <td>
-                <ins>The GenericModuleSource Object subclass corresponding to this source Module Record's source phase (<emu-xref href="#sec-module-source-objects"></emu-xref>).</ins>
+                <ins>The AbstractModuleSource Object subclass corresponding to this source Module Record's source phase (<emu-xref href="#sec-modulesource-objects"></emu-xref>).</ins>
               </td>
             </tr>
             <tr>
@@ -838,22 +838,81 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
 </emu-clause>
 <emu-clause id="sec-reflection" number=28>
   <h1>Reflection</h1>
-  <emu-clause id="sec-module-source-objects">
-    <h1><ins>Module Source Objects</ins></h1>
-    <p>Different source record types reflected as module source reflection objects in their source phase (a compiled source module which has not yet been linked, instantiated or executed).</p>
-    <p>All Module Source reflection Objects are represented by subclasses of %GenericModuleSource% and provide a [[HostSourceMetadata]] internal slot.</p>
+  <emu-clause id="sec-modulesource-objects">
+    <h1><ins>ModuleSource Objects</ins></h1>
+    <p>Different source record types reflect as different module source class instances in their source phase, which represent a compiled source module which has not yet been linked, instantiated or executed.</p>
+    <p>All ModuleSource reflection Objects are subclasses of %AbstractModuleSource% and provide a [[HostSourceMetadata]] internal slot.</p>
+
+    <emu-clause id="sec-%abstractmodulesource%-intrinsic-object">
+      <h1>The %AbstractModuleSource% Intrinsic Object</h1>
+      <p>The <dfn>%AbstractModuleSource%</dfn> intrinsic object:</p>
+      <ul>
+        <li>is a constructor function object that all of the _AbstractModuleSource_ constructor objects inherit from.</li>
+        <li>along with its corresponding prototype object, provides common properties that are inherited by all _AbstractModuleSource_ constructors and their instances.</li>
+        <li>does not have a global name or appear as a property of the global object.</li>
+        <li>acts as the abstract superclass of the various _AbstractModuleSource_ constructors.</li>
+        <li>will throw an error when invoked, because it is an abstract class constructor. The _AbstractModuleSource_ constructors do not perform a `super` call to it.</li>
+      </ul>
+
+      <p>The <dfn>%AbstractModuleSource%</dfn> object:</p>
+      <ul>
+        <li>is an ordinary object.</li>
+        <li>has a [[Prototype]] internal slot whose value is %Object.prototype%.</li>
+      </ul>
+
+      <emu-clause id="sec-%abstractmodulesource%">
+        <h1>%AbstractModuleSource% ( )</h1>
+        <p>This function performs the following steps when called:</p>
+        <emu-alg>
+          1. Throw a *TypeError* exception.
+        </emu-alg>
+        <p>The *"length"* property of this function is *+0*<sub>𝔽</sub>.</p>
+      </emu-clause>
+
+      <emu-note>
+        <p>All subclasses of AbstractModuleSource must provide a @@toStringTag property getter performing an instance branding check (see <emu-xref href="#sec-get-modulesource-prototype-@@tostringtag"></emu-xref>).</p>
+      </emu-note>
+    </emu-clause>
+
+    <emu-clause id="sec-abstract-operations-for-abstractmodulesource-objects">
+      <h1>Abstract Operations for AbstractModuleSource Objects</h1>
+      <emu-clause id="sec-retrievehostsourcemetadata" type="abstract operation">
+        <h1>
+          RetrieveHostSourceMetadata (
+            _anyModuleSource_: an Object,
+          ): anything
+        </h1>
+        <dl class="header">
+          <dt>description</dt>
+          <dd>Used to retrieve the host-defined data from a subclass of %AbstractModuleSource% to populate for a new instance of its module record by the host.</dd>
+        </dl>
+        <emu-alg>
+          1. Assert: _anyModuleSource_ is an instance of a subclass of %AbstractModuleSource%.
+          1. Assert: _anyModuleSource_ has a [[HostSourceMetadata]] internal slot.
+          1. Return _anyModuleSource_.[[HostSourceMetadata]].
+        </emu-alg>
+      </emu-clause>
+    </emu-clause>
 
     <emu-clause id="sec-modulesource-constructor">
       <h1>The ModuleSource Constructor</h1>
-      <p>The ModuleSource Object subclass specifically only represents the source phase of SourceTextModuleRecord, and is distinct from other Module Source Objects.</p>
+      <p>The ModuleSource Object AbstractModuleSource subclass represents the source phase of SourceTextModuleRecord.</p>
 
       <p>The ModuleSource constructor:</p>
       <ul>
         <li>is <dfn>%ModuleSource%</dfn>.</li>
         <li>is the initial value of the *"ModuleSource"* property of the global object.</li>
-        <li>is a subclass of `%GenericModuleSource%`.</li>
-        <li>throws a *TypeError* exception when constructed with or without new.</li>
+        <li>is a subclass of `%AbstractModuleSource%`.</li>
       </ul>
+
+      <emu-clause id="sec-%abstractmodulesource%">
+        <h1>%AbstractModuleSource% ( )</h1>
+        <p>This function performs the following steps when called:</p>
+        <emu-alg>
+          1. Throw a *TypeError* exception.
+        </emu-alg>
+        <p>The *"length"* property of this function is *+0*<sub>𝔽</sub>.</p>
+      </emu-clause>
     </emu-clause>
 
     <emu-clause id="sec-properties-of-the-modulesource-prototype-object">
@@ -861,7 +920,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
       <p>The <dfn>ModuleSource prototype object</dfn>:</p>
       <ul>
         <li>is <dfn>%ModuleSource.prototype%</dfn>.</li>
-        <li>has a [[Prototype]] internal slot whose value is %GenericModuleSource%.</li>
+        <li>has a [[Prototype]] internal slot whose value is %AbstractModuleSource%.</li>
         <li>has the following properties:</li>
       </ul>
 
@@ -878,43 +937,8 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
       </emu-clause>
 
       <emu-note>
-        <p>Only SourceTextModuleRecord module source objects may use the *"ModuleSource"* string value and be represented by a ModuleSource instance.</p>
+        <p>Only SourceTextModuleRecord module source objects may be represented by a ModuleSource instance and return the *"ModuleSource"* string value for @@toStringTag.</p>
       </emu-note>
-    </emu-clause>
-
-    <emu-clause id="sec-%genericmodulesource%-object">
-      <h1>The %GenericModuleSource% Object</h1>
-      <p>%GenericModuleSource% provides the shared base class for all source phase objects.</p>
-
-      <p>The <dfn>%GenericModuleSource%</dfn> object:</p>
-      <ul>
-        <li>is an ordinary object.</li>
-        <li>has a [[Prototype]] internal slot whose value is %Object.prototype%.</li>
-      </ul>
-
-      <emu-note>
-        <p>All subclasses of GenericModuleSource must provide a @@toStringTag property getter performing an instance branding check (see <emu-xref href="#sec-get-modulesource-prototype-@@tostringtag"></emu-xref>).</p>
-      </emu-note>
-    </emu-clause>
-
-    <emu-clause id="sec-abstract-operations-for-module-source-objects">
-      <h1>Abstract Operations for Module Source Objects</h1>
-      <emu-clause id="sec-retrievehostsourcemetadata" type="abstract operation">
-        <h1>
-          RetrieveHostSourceMetadata (
-            _anyModuleSource_: an Object,
-          ): anything
-        </h1>
-        <dl class="header">
-          <dt>description</dt>
-          <dd>Used to retrieve the host-defined data from a subclass of %GenericModuleSource% to populate for a new instance of its module record by the host.</dd>
-        </dl>
-        <emu-alg>
-          1. Assert: _anyModuleSource_ inherits from %GenericModuleSource%.
-          1. Assert: _anyModuleSource_ has a [[HostSourceMetadata]] internal slot.
-          1. Return _anyModuleSource_.[[HostSourceMetadata]].
-        </emu-alg>
-      </emu-clause>
     </emu-clause>
   </emu-clause>
 </emu-clause>
@@ -930,6 +954,6 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
     <p>[[HostDefined]] on JobCallback Records: See <emu-xref href="#table-jobcallback-records"></emu-xref>.</p>
     <p>[[HostSynchronizesWith]] on Candidate Executions: See <emu-xref href="#table-candidate-execution-records"></emu-xref>.</p>
     <p>[[IsHTMLDDA]]: See <emu-xref href="#sec-IsHTMLDDA-internal-slot"></emu-xref>.</p>
-    <p><ins>[[HostSourceMetadata]] on %GenericModuleSource% subclasses. See <emu-xref href="#sec-retrievehostsourcemetadata"></emu-xref>.</ins></p>
+    <p><ins>[[HostSourceMetadata]] on %AbstractModuleSource% subclasses. See <emu-xref href="#sec-retrievehostsourcemetadata"></emu-xref>.</ins></p>
   </emu-annex>
 </emu-annex>
