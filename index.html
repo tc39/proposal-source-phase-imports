@@ -4213,6 +4213,10 @@ li.menu-search-result-term:before {
         <p>The abstract operation RetrieveHostSourceData takes argument <var>anyModuleSourceInstance</var> (an Object) and returns anything. Used to retrieve the <emu-xref href="#host-defined"><a href="https://tc39.es/ecma262/#host-defined">host-defined</a></emu-xref> source data from a subclass of <emu-xref href="#sec-%modulesourceprototype%-intrinsic-object" id="_ref_104"><a href="#sec-%modulesourceprototype%-intrinsic-object">%ModuleSourcePrototype%</a></emu-xref> to populate for a new instance of its module record by the <emu-xref href="#host"><a href="https://tc39.es/ecma262/#host">host</a></emu-xref>. It performs the following steps when called:</p>
         <emu-alg><ol><li><emu-xref href="#assert"><a href="https://tc39.es/ecma262/#assert">Assert</a></emu-xref>: <var>anyModuleSourceInstance</var> has a [[HostSourceData]] internal slot.</li><li>Return <var>anyModuleSourceInstance</var>.[[HostSourceData]].</li></ol></emu-alg>
       </emu-clause>
+
+      <emu-note><span class="note">Note</span><div class="note-contents">
+        <p>When creating a ModuleRecord for a given ModuleSource instance, this abstract method can be used by <emu-xref href="#host"><a href="https://tc39.es/ecma262/#host">hosts</a></emu-xref> to initialize the necessary [[HostDefined]] data on the ModuleRecord.</p>
+      </div></emu-note>
     </emu-clause>
 
     <emu-clause id="sec-modulesource-constructor">
@@ -4267,7 +4271,7 @@ li.menu-search-result-term:before {
     <p>[[HostDefined]] on <emu-xref href="#sec-jobcallback-records"><a href="https://tc39.es/ecma262/#sec-jobcallback-records">JobCallback Records</a></emu-xref>: See <emu-xref href="#table-jobcallback-records"><a href="https://tc39.es/ecma262/#table-jobcallback-records">Table 28</a></emu-xref>.</p>
     <p>[[HostSynchronizesWith]] on Candidate Executions: See <emu-xref href="#table-candidate-execution-records"><a href="https://tc39.es/ecma262/#table-candidate-execution-records">Table 90</a></emu-xref>.</p>
     <p>[[IsHTMLDDA]]: See <emu-xref href="#sec-IsHTMLDDA-internal-slot"><a href="https://tc39.es/ecma262/#sec-IsHTMLDDA-internal-slot">B.3.6</a></emu-xref>.</p>
-    <p><ins>[[HostSourceData]] on <emu-xref href="#sec-%modulesourceprototype%-intrinsic-object" id="_ref_110"><a href="#sec-%modulesourceprototype%-intrinsic-object">%ModuleSourcePrototype%</a></emu-xref> subclasses. See <emu-xref href="#sec-retrievehostsourcedata" id="_ref_11"><a href="#sec-retrievehostsourcedata">28.1.2.1</a></emu-xref>.</ins></p>
+    <p><ins>[[HostSourceData]] on <emu-xref href="#sec-%modulesourceprototype%-intrinsic-object" id="_ref_110"><a href="#sec-%modulesourceprototype%-intrinsic-object">%ModuleSourcePrototype%</a></emu-xref> subclass instances. See <emu-xref href="#sec-retrievehostsourcedata" id="_ref_11"><a href="#sec-retrievehostsourcedata">28.1.2.1</a></emu-xref>.</ins></p>
   </emu-annex>
 </emu-annex><emu-annex id="sec-copyright-and-software-license">
       <h1><span class="secnum">B</span> Copyright &amp; Software License</h1>
