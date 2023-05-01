@@ -69,32 +69,23 @@ Only the `source` import source phase is specified by this proposal.
 
 ### Defining Module Source
 
-The object provided by the module source phase must be a subclass of the
-`AbstractModuleSource` object, defined by this specification to be a minimal
+The object provided by the module source phase must have a prototype set to the
+`ModuleSourcePrototype` object, defined by this specification to be a minimal
 object representation for a compiled modular resource.
 
 ### JS Module Source
 
 For JavaScript modules, the module source phase is then specified to return
-a `ModuleSource` object:
-
-```
-class ModuleSource extends AbstractModuleSource {
-  constructor () {
-    throw new Error();
-  }
-  get [Symbol.toStringTag] () {
-    if (!hasInternalSlotsOfAbstractModuleSourceInstance(this)) throw new TypeError();
-    return 'ModuleSource';
-  }
-}
-```
+a `ModuleSource` object, representing an ECMAScript Module Source.
 
 This is a minimal implementation to support the source phase including branding
 checks via `toStringTag` and providing a unique key for the module resource.
 
-Future proposals can then add support for [bindings lookup methods][],
+Future proposals may then add support for [bindings lookup methods][],
 the [ModuleSource constructor][] and [instantiation][] support.
+
+New properties may be added to the base `ModuleSourcePrototype`, or shared
+with ECMASCript module sources via `ModuleSource` additions.
 
 ### Wasm Module Source
 
