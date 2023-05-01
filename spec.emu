@@ -290,7 +290,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
                 <ins>an Object or *null* (defaults to *null*)</ins>
               </td>
               <td>
-                <ins>The GenericModuleSource Object subclass corresponding to this source Module Record's source phase (<emu-xref href="#sec-modulesource-objects"></emu-xref>).</ins>
+                <ins>The GenericModuleSource Object subclass corresponding to this source Module Record's source phase (<emu-xref href="#sec-module-source-objects"></emu-xref>).</ins>
               </td>
             </tr>
             <tr>
@@ -837,6 +837,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
   </emu-clause>
 </emu-clause>
 <emu-clause id="sec-reflection" number=28>
+  <h1>Reflection</h1>
   <emu-clause id="sec-module-source-objects">
     <h1><ins>Module Source Objects</ins></h1>
     <p>Different source record types reflected as module source reflection objects in their source phase (a compiled source module which has not yet been linked, instantiated or executed).</p>
