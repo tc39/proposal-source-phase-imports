@@ -1916,7 +1916,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
       <ul>
         <li>is <dfn>%ModuleSource%</dfn>.</li>
         <li>is the initial value of the *"ModuleSource"* property of the global object.</li>
-        <li>is a subclass of `%ModuleSourcePrototype%`.</li>
+        <li>has a [[Prototype]] internal slot whose value is %ModuleSourcePrototype%.</li>
         <li>does not have a [[HostSourceData]] internal slot.
       </ul>
     </emu-clause>
