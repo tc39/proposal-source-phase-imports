@@ -853,13 +853,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
         <li>acts as the abstract superclass of the various _AbstractModuleSource_ constructors.</li>
         <li>will throw an error when invoked, because it is an abstract class constructor. The _AbstractModuleSource_ constructors do not perform a `super` call to it.</li>
       </ul>
-
-      <p>The <dfn>%AbstractModuleSource%</dfn> object:</p>
-      <ul>
-        <li>is an ordinary object.</li>
-        <li>has a [[Prototype]] internal slot whose value is %Object.prototype%.</li>
-      </ul>
-
+ 
       <emu-clause id="sec-%abstractmodulesource%">
         <h1>%AbstractModuleSource% ( )</h1>
         <p>This function performs the following steps when called:</p>
@@ -904,15 +898,6 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
         <li>is the initial value of the *"ModuleSource"* property of the global object.</li>
         <li>is a subclass of `%AbstractModuleSource%`.</li>
       </ul>
-
-      <emu-clause id="sec-%abstractmodulesource%">
-        <h1>%AbstractModuleSource% ( )</h1>
-        <p>This function performs the following steps when called:</p>
-        <emu-alg>
-          1. Throw a *TypeError* exception.
-        </emu-alg>
-        <p>The *"length"* property of this function is *+0*<sub>𝔽</sub>.</p>
-      </emu-clause>
     </emu-clause>
 
     <emu-clause id="sec-properties-of-the-modulesource-prototype-object">
