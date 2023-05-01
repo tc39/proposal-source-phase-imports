@@ -90,7 +90,7 @@ with ECMASCript module sources via `ModuleSource` additions.
 ### Wasm Module Source
 
 For WebAssembly modules, the existing `WebAssembly.Module` object is to be
-updated to be a subclass of `AbstractModuleSource` in the
+updated to have a prototype value of `ModuleSourcePrototype` in the
 [WebAssembly JS integration API][wasm-js-api].
 
 The existing value for `toStringTag` of `WebAssembly.Module` would remain.
