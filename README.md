@@ -50,7 +50,7 @@ const x = await import("<specifier>", { phase: "source" });
 ```
 
 For dynamic imports, import phase is specified in the same second
-attribute options bag that [import assertions][] are specified in, using the
+attribute options bag that [import attributes][] are specified in, using the
 `phase` key.
 
 ### Loading Phase
@@ -69,29 +69,41 @@ Only the `source` import source phase is specified by this proposal.
 
 ### Defining Module Source
 
-Module source is defined through the [ECMA-262 ES modules HostLoadImportedModule refactoring][],
-which moves the construction of module records to the host, and on which we can define a
-`[[ModuleSourceObject]]` custom object to be returned by module source phase that is compatible
-with module expressions.
+The object provided by the module source phase must be a subclass of the
+`GenericModuleSource` object, defined by this specification to be a minimal
+object representation for a compiled modular resource.
 
 ### JS Module Source
 
-The type of the module source object for a JavaScript module is would depend
-on the [module source][] specification.
+For JavaScript modules, the module source phase is then specified to return
+a `ModuleSource` object:
 
-In the current specification, the JS module source case just throws an error
-to support this as a future addition.
+```
+class ModuleSource extends GenericModuleSource {
+  constructor () {
+    throw new Error();
+  }
+  get [Symbol.toStringTag] () {
+    if (this instanceof ModuleSource)
+      return 'ModuleSource';
+    throw new TypeError();
+  }
+}
+```
+
+This is a minimal implementation to support the source phase including branding
+checks via `toStringTag` and providing a unique key for the module resource.
+
+Future proposals would then add support for [bindings lookup methods][],
+the [ModuleSource constructor][] and [instantiation][] support.
 
 ### Wasm Module Source
 
-The type of the module source object for WebAssembly would be a
-`WebAssembly.Module`, as defined in the [WebAssembly JS integration
-API][wasm-js-api].
+For WebAssembly modules, the existing `WebAssembly.Module` object is to be
+updated to be a subclass of `GenericModuleSource` in the
+[WebAssembly JS integration API][wasm-js-api].
 
-The module source would represent an unlinked and uninstantiated module, while
-still being able to support the same CSP policy as the native [ESM
-integration][wasm-esm], avoiding the need for `unsafe-wasm-eval` for custom Wasm
-execution.
+The existing value for `toStringTag` of `WebAssembly.Module` would remain.
 
 This allows workflows, as explained in the motivation, like the following:
 
@@ -119,29 +131,14 @@ In turn this enables [Wasm components to be able to import][]
 
 ### Other Module Types
 
-Other module types may define their own host module sources. If no module phase import
-is defined, it will fail during the loading phase.
+Any other host-defined module types may define their own host module sources. If no module phase import is defined, it will fail during the loading phase.
 
 ## Security Benefits
 
-Tracking the origins of scripts or modules is important for protecting programs
-from cross-site scripting attacks, for example using [Content Security
-Policies][CSP]. Extending this behaviour to dynamic module sources enables
-custom loaders while retaining these security benefits.
+The native ES module loader is able to implement security policies, including
+support for [Content Security Policies][CSP] in browsers. This property does not just impact platforms using CSP, but also other platforms with systems to restrict permissions, such as Deno. These policies are based on protecting which URLs are supported for the compilation and execution of scripts or modules.
 
-Wasm compilation is unfortunately completely dynamic right now (manual network
-fetch & compile), so Wasm unconditionally requires a
-`script-src: unsafe-wasm-eval` CSP attribute.
-
-With this proposal, the JS and Wasm module sources would be known statically,
-so would not have to be considered as dynamic code generation. This would allow
-the web platform to enabling dynamic instantiation for these modules while
-lifting the restriction of an arbitrary evaluation CSP policy and instead just
-require `script-src: self` (or `wasm-src: self`). Also see
-https://github.com/WebAssembly/esm-integration/issues/56.
-
-This property does not just impact platforms using CSP, but also other platforms
-with systems to restrict permissions, such as Deno.
+Extending the static security benefits of the host module system to custom loaders is a security benefit of this proposal. For Wasm, it would enable source-specific CSP policies for dynamic Wasm instantiation.
 
 ## Cache Key Semantics
 
@@ -150,11 +147,11 @@ be unique to the module being imported from.
 
 ## Q&A
 
-**Q**: How does this relate to import assertions / evaluator attributes?
+**Q**: How does this relate to import attributes?
 
-**A**: Import assertions are properties of the module request, while source imports
+**A**: Import attributes are properties of the module request, while source imports
 represent phases of that specific request / key in the module map, without affecting
-the idempotency of the module load.
+the idempotency of the module load. Both can be used together for a resource to indicate alternative phasing for the given module resource and attributes.
 
 **Q**: How does this relate to module expressions and compartments?
 
@@ -174,13 +171,16 @@ needed. See the security improvements section for more details.
     https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy
 [ECMA-262 ES modules HostLoadImportedModule refactoring]:
     https://github.com/tc39/ecma262/pull/2905
+[ModuleSource constructor]: 
 [Wasm components to be able to import]:
     https://github.com/WebAssembly/component-model/blob/main/design/mvp/Explainer.md#ESM-integration
 [Wasm module object]:
     https://webassembly.github.io/spec/js-api/index.html#modules
 [asset references proposal]: https://github.com/tc39/proposal-asset-references
+[bindings lookup methods]: https://github.com/tc39/proposal-compartments/blob/master/1-static-analysis.md
 [compartments]: https://github.com/tc39/proposal-compartments
-[import assertions]: https://github.com/tc39/proposal-import-assertions/
+[import attributes]: https://github.com/tc39/proposal-import-attributes/
+[instantiation]: https://github.com/tc39/proposal-compartments/blob/master/0-module-and-module-source.md#module-instances
 [module-linking]:
     https://github.com/WebAssembly/module-linking/blob/main/proposals/module-linking/Binary.md#import-section-updates
 [module expressions]: https://github.com/tc39/proposal-module-expressions
