@@ -84,9 +84,8 @@ class ModuleSource extends AbstractModuleSource {
     throw new Error();
   }
   get [Symbol.toStringTag] () {
-    if (this instanceof ModuleSource)
-      return 'ModuleSource';
-    throw new TypeError();
+    if (!hasInternalSlotsOfAbstractModuleSourceInstance(this)) throw new TypeError();
+    return 'ModuleSource';
   }
 }
 ```
@@ -94,7 +93,7 @@ class ModuleSource extends AbstractModuleSource {
 This is a minimal implementation to support the source phase including branding
 checks via `toStringTag` and providing a unique key for the module resource.
 
-Future proposals would then add support for [bindings lookup methods][],
+Future proposals can then add support for [bindings lookup methods][],
 the [ModuleSource constructor][] and [instantiation][] support.
 
 ### Wasm Module Source
