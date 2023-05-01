@@ -1906,6 +1906,10 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
           1. Return _anyModuleSourceInstance_.[[HostSourceData]].
         </emu-alg>
       </emu-clause>
+
+      <emu-note>
+        <p>When creating a ModuleRecord for a given ModuleSource instance, this abstract method can be used by hosts to initialize the necessary [[HostDefined]] data on the ModuleRecord.</p>
+      </emu-note>
     </emu-clause>
 
     <emu-clause id="sec-modulesource-constructor">
@@ -1964,6 +1968,6 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
     <p>[[HostDefined]] on JobCallback Records: See <emu-xref href="#table-jobcallback-records"></emu-xref>.</p>
     <p>[[HostSynchronizesWith]] on Candidate Executions: See <emu-xref href="#table-candidate-execution-records"></emu-xref>.</p>
     <p>[[IsHTMLDDA]]: See <emu-xref href="#sec-IsHTMLDDA-internal-slot"></emu-xref>.</p>
-    <p><ins>[[HostSourceData]] on %ModuleSourcePrototype% subclasses. See <emu-xref href="#sec-retrievehostsourcedata"></emu-xref>.</ins></p>
+    <p><ins>[[HostSourceData]] on %ModuleSourcePrototype% subclass instances. See <emu-xref href="#sec-retrievehostsourcedata"></emu-xref>.</ins></p>
   </emu-annex>
 </emu-annex>
