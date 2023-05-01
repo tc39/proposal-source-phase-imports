@@ -906,6 +906,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
       <ul>
         <li>is <dfn>%ModuleSource.prototype%</dfn>.</li>
         <li>has a [[Prototype]] internal slot whose value is %AbstractModuleSource%.</li>
+        <li>is not a ModuleSource instance or an AbstractModuleSource instance and does not have a [[HostSourceMetadata]] internal slot.
         <li>has the following properties:</li>
       </ul>
 
