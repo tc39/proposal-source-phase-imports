@@ -455,7 +455,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
             </tr>
             <tr>
               <td>
-                <ins>%ModuleSourcePrototype%</ins>
+                <ins>%AbstractModuleSourcePrototype%</ins>
               </td>
               <td>
               </td>
@@ -920,9 +920,9 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
             1. <ins>If _moduleSourceObject_ is *null*, then</ins>
               1. <ins>Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, &laquo; a newly created *TypeError* object &raquo;).</ins>
               1. <ins>Return ~unused~.</ins>
-            1. <ins>Assert: _moduleSourceObject_.[[Prototype]] is %ModuleSourcePrototype%.</ins>
+            1. <ins>Assert: _moduleSourceObject_.[[Prototype]] is %AbstractModuleSourcePrototype%.</ins>
             1. <ins>Assert: _moduleSourceObject_ has a [[HostSourceData]] internal slot.</ins>
-            1. <ins>Assert: _moduleSourceObject_ is a ModuleSource instance if and only if _module_ is a SourceTextModuleRecord.</ins>
+            1. <ins>Assert: _moduleSourceObject_ is a ModuleSource instance if and only if _module_ is a Source Text Module Record.</ins>
             1. <ins>Perform ! Call(_promiseCapability_.[[Resolve]], *undefined*, &laquo; _moduleSourceObject_ &raquo;).</ins>
             1. <ins>Return ~unused~.</ins>
           1. Let _loadPromise_ be _module_.LoadRequestedModules().
@@ -964,7 +964,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
         <h1><ins>ModuleRequest Records</ins></h1>
 
         <p>A <dfn id="modulerequest-record" variants="ModuleRequest Records">ModuleRequest Record</dfn> represents the request to import a module up to a given phase. It consists of the following fields:</p>
-        <emu-table id="table-modulerequest-fields" caption="ModuleRequest Record fields">
+        <emu-table id="table-modulerequest-record-fields" caption="ModuleRequest Record fields">
           <table>
             <tbody>
               <tr>
@@ -1081,6 +1081,53 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
         </emu-alg>
       </emu-clause>
 
+      <emu-clause id="sec-modulesource-record">
+        <h1><ins>ModuleSource Records</ins></h1>
+
+        <p>A <dfn id="modulesource-record" variants="ModuleSource Records">ModuleSource Record</dfn> represents the request to import a module up to a given phase. It consists of the following fields:</p>
+        <emu-table id="table-modulesource-record-fields" caption="ModuleSource Record fields">
+          <table>
+            <tbody>
+              <tr>
+                <th>
+                  Field Name
+                </th>
+                <th>
+                  Value Type
+                </th>
+                <th>
+                  Meaning
+                </th>
+              </tr>
+              <tr>
+                <td>
+                  [[SourceType]]
+                </td>
+                <td>
+                  String
+                </td>
+                <td>
+                  The unique source type string representing this module source. Source Text Module Records are represented by the *"source-text"* string.
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  [[HostDefined]]
+                </td>
+                <td>
+                  anything (default value is *undefined*)
+                </td>
+                <td>
+                  Field reserved for use by host environments to associate additional information with module sources.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </emu-table>
+
+        <emu-note type="editor">In general, this proposal replaces places where module specifiers are passed around with ModuleRequest Records. For example, several syntax-directed operations, such as ModuleRequests produce Lists of ModuleRequest Records rather than Lists of Strings which are interpreted as module specifiers. Some algorithms like ImportEntries and ImportEntriesForModule pass around ModuleRequest Records rather than Strings, in a way which doesn't require any particular textual change. Additionally, record fields in Cyclic Module Records and Source Text Module Records which contained Lists of Strings are replaced by Lists of ModuleRequest Records, as indicated above.</emu-note>
+      </emu-clause>
+
       <emu-clause id="sec-abstract-module-records">
         <h1>Abstract Module Records</h1>
         <p>A <dfn variants="Module Records">Module Record</dfn> encapsulates structural information about the imports and exports of a single module. This information is used to link the imports and exports of sets of connected modules. A Module Record includes four fields that are only used when evaluating a module.</p>
@@ -1142,7 +1189,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
                 <ins>an Object or *null* (defaults to *null*)</ins>
               </td>
               <td>
-                <ins>The ModuleSource Object corresponding to this source Module Record's source phase (<emu-xref href="#sec-modulesource-objects"></emu-xref>).</ins>
+                <ins>The ModuleSource Object corresponding to this source Module Record's source phase (<emu-xref href="#sec-module-source-objects"></emu-xref>).</ins>
               </td>
             </tr>
             <tr>
@@ -1869,59 +1916,43 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
 
 <emu-clause id="sec-reflection" number=28>
   <h1>Reflection</h1>
-  <emu-clause id="sec-modulesource-objects">
-    <h1><ins>ModuleSource Objects</ins></h1>
-    <p>ModuleSource Objects represent modules in their source import phase, which are not linked, instantiated or executed.</p>
-    <p>The ModuleSource Object represents the language SourceText module type. Hosts may define their own ModuleSource Objects for non-SourceText module types.</p>
-    <p>All ModuleSource Objects have a prototype of %ModuleSourcePrototype% and provide a [[HostSourceData]] internal slot.</p>
+  <emu-clause id="sec-module-source-objects">
+    <h1><ins>Module Source Objects</ins></h1>
+    <p>Module Source Objects represent modules in their source import phase, which are not linked, instantiated or executed.</p>
+    <p>All Module Source Objects, including ModuleSource and host-defined types, have a prototype of %AbstractModuleSourcePrototype% and provide a [[ModuleSourceRecord]] internal slot.</p>
+    <p>The ModuleSource Object represents the source phase of the Source Text Module Module record. Hosts may define their own Module Source Objects for other module record types.</p>
 
     <emu-clause id="sec-%modulesourceprototype%-intrinsic-object">
-      <h1>The %ModuleSourcePrototype% Object</h1>
-      <p>The <dfn>%ModuleSourcePrototype%</dfn> object:</p>
+      <h1>The %AbstractModuleSourcePrototype% Object</h1>
+      <p>The <dfn>%AbstractModuleSourcePrototype%</dfn> object:</p>
       <ul>
         <li>has a [[Prototype]] internal slot whose value is %Object.prototype%.</li>
         <li>is an ordinary object.</li>
         <li>does not have a global name or appear as a property of the global object.</li>
+        <li>has the following properties:</li>
       </ul>
 
-      <emu-note>
-        <p>Subclasses of ModuleSourcePrototype should provide a @@toStringTag property getter performing an internal slot check (see <emu-xref href="#sec-get-modulesource-prototype-@@tostringtag"></emu-xref>).</p>
-      </emu-note>
-    </emu-clause>
-
-    <emu-clause id="sec-abstract-operations-for-modulesourceprototype-objects">
-      <h1>Abstract Operations for ModuleSourcePrototype Objects</h1>
-      <emu-clause id="sec-retrievehostsourcedata" type="abstract operation">
-        <h1>
-          RetrieveHostSourceData (
-            _anyModuleSourceInstance_: an Object,
-          ): anything
-        </h1>
-        <dl class="header">
-          <dt>description</dt>
-          <dd>Used to retrieve the host-defined source data from a subclass of %ModuleSourcePrototype% to populate for a new instance of its module record by the host.</dd>
-        </dl>
+      <emu-clause id="sec-get-%modulesourceprototype%.sourceType">
+        <h1>get %AbstractModuleSourcePrototype%.sourceType</h1>
+        <p>`%AbstractModuleSourcePrototype%.sourceType` is an accessor property whose set accessor function is *undefined*. Its get accessor function performs the following steps when called:</p>
         <emu-alg>
-          1. Assert: _anyModuleSourceInstance_ has a [[HostSourceData]] internal slot.
-          1. Return _anyModuleSourceInstance_.[[HostSourceData]].
+          1. Let _O_ be ? ToObject(*this* value).
+          1. Perform ? RequireInternalSlot(_O_, [[ModuleSourceRecord]]).
+          1. Return _O_.[[ModuleSourceRecord]].[[SourceType]].
         </emu-alg>
       </emu-clause>
-
-      <emu-note>
-        <p>When creating a ModuleRecord for a given ModuleSource instance, this abstract method can be used by hosts to initialize the necessary [[HostDefined]] data on the ModuleRecord.</p>
-      </emu-note>
     </emu-clause>
 
     <emu-clause id="sec-modulesource-constructor">
       <h1>The ModuleSource Constructor</h1>
-      <p>The ModuleSource Object ModuleSourcePrototype subclass represents the source phase of SourceTextModuleRecord.</p>
+      <p>The ModuleSource Object represents the source phase of a SourceTextModuleRecord.</p>
 
       <p>The ModuleSource constructor:</p>
       <ul>
         <li>is <dfn>%ModuleSource%</dfn>.</li>
         <li>is the initial value of the *"ModuleSource"* property of the global object.</li>
-        <li>has a [[Prototype]] internal slot whose value is %ModuleSourcePrototype%.</li>
-        <li>does not have a [[HostSourceData]] internal slot.
+        <li>has a [[Prototype]] internal slot whose value is %AbstractModuleSourcePrototype%.</li>
+        <li>does not have a [[ModuleSourceRecord]] internal slot.
       </ul>
     </emu-clause>
 
@@ -1930,29 +1961,43 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
       <p>The <dfn>ModuleSource prototype object</dfn>:</p>
       <ul>
         <li>is <dfn>%ModuleSource.prototype%</dfn>.</li>
-        <li>has a [[Prototype]] internal slot whose value is %ModuleSourcePrototype%.</li>
-        <li>is not a ModuleSource instance or an ModuleSourcePrototype instance and does not have a [[HostSourceData]] internal slot.
-        <li>has the following properties:</li>
+        <li>has a [[Prototype]] internal slot whose value is %AbstractModuleSourcePrototype%.</li>
+        <li>is not a ModuleSource instance or a %AbstractModuleSourcePrototype% and does not have a [[ModuleSourceRecord]] internal slot.
       </ul>
 
-      <emu-clause id="sec-get-modulesource-prototype-@@tostringtag">
-        <h1>get ModuleSource Prototype [ @@toStringTag ]</h1>
-        <p>`ModuleSource Prototype[@@toStringTag]` is an accessor property whose set accessor function is *undefined*. Its get accessor function performs the following steps when called:</p>
-        <emu-alg>
-          1. Let _O_ be ? ToObject(*this* value).
-          1. Perform ? RequireInternalSlot(_R_, [[HostSourceData]]).
-          1. Return the String value *"ModuleSource"*.
-        </emu-alg>
+      <emu-clause id="sec-modulesource.prototype-@@tostringtag">
+        <h1>ModuleSource.prototype [ @@toStringTag ]</h1>
+        <p>The initial value of the @@toStringTag property is the String value *"ModuleSource"*.</p>
+        <p>This property has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *true* }.</p>
       </emu-clause>
 
       <emu-note>
-        <p>Only SourceTextModuleRecord module source objects may be represented by a ModuleSource instance and return the *"ModuleSource"* string value for @@toStringTag. All other host Module Source Objects must provide their own unique string value.</p>
+        <p>Only SourceTextModuleRecord modules may be represented in their source phase by a ModuleSource instance and the *"source-text"* string value for [[SourceType]].</p>
       </emu-note>
     </emu-clause>
 
     <emu-clause id="sec-properties-of-modulesource-instances">
       <h1>Properties of ModuleSource Instances</h1>
-      <p>ModuleSource instances are ordinary objects that inherit properties from the ModuleSource Prototype. ModuleSource instances also have a [[HostSourceData]] internal slot.</p>
+      <p>ModuleSource instances are ordinary objects that inherit properties from the ModuleSource Prototype.</p>
+      <p>ModuleSource instances have a [[ModuleSourceRecord]] internal slot containing their associated ModuleSource Record whose [[SourceType]] field is *"source-text"*.</p>
+    </emu-clause>
+
+    <emu-clause id="sec-createmodulesource" type="abstract operation">
+      <h1>
+        CreateModuleSource (
+          _hostDefined_: anything,
+        ): a ModuleSource Instance
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>Create a new ModuleSource with the provided _hostDefined_ data.</dd>
+      </dl>
+      <emu-alg>
+        1. Let _moduleSourceRecord_ be the ModuleSource Record { [[SourceType]]: *"source-text"*, [[HostDefined]]: _hostDefined_ }.
+        1. Let _moduleSource_ be OrdinaryObjectCreate(%ModuleSource.prototype%).
+        1. Set _moduleSource_.[[ModuleSourceRecord]] to _moduleSourceRecord_.
+        1. Return _moduleSource_.
+      </emu-alg>
     </emu-clause>
   </emu-clause>
 </emu-clause>
@@ -1965,9 +2010,9 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
     <p>[[HostDefined]] on Realm Records: See <emu-xref href="#table-realm-record-fields"></emu-xref>.</p>
     <p>[[HostDefined]] on Script Records: See <emu-xref href="#table-script-records"></emu-xref>.</p>
     <p>[[HostDefined]] on Module Records: See <emu-xref href="#table-module-record-fields"></emu-xref>.</p>
+    <p>[[HostDefined]] on ModuleSource Records: See <emu-xref href="#table-modulesource-record-fields"></emu-xref>.</p>
     <p>[[HostDefined]] on JobCallback Records: See <emu-xref href="#table-jobcallback-records"></emu-xref>.</p>
     <p>[[HostSynchronizesWith]] on Candidate Executions: See <emu-xref href="#table-candidate-execution-records"></emu-xref>.</p>
     <p>[[IsHTMLDDA]]: See <emu-xref href="#sec-IsHTMLDDA-internal-slot"></emu-xref>.</p>
-    <p><ins>[[HostSourceData]] on %ModuleSourcePrototype% subclass instances. See <emu-xref href="#sec-retrievehostsourcedata"></emu-xref>.</ins></p>
   </emu-annex>
 </emu-annex>

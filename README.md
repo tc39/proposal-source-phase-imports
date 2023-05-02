@@ -71,15 +71,17 @@ Only the `source` import source phase is specified by this proposal.
 
 The object provided by the module source phase must have a prototype set to the
 `ModuleSourcePrototype` object, defined by this specification to be a minimal
-object representation for a compiled modular resource.
+shared base prototype for a compiled modular resource.
+
+In addition we define the `sourceType` getter returning the type string
+corresponding to the name of the specific module source subclass.
 
 ### JS Module Source
 
 For JavaScript modules, the module source phase is then specified to return
 a `ModuleSource` object, representing an ECMAScript Module Source.
 
-This is a minimal implementation to support the source phase including branding
-checks via `toStringTag` and providing a unique key for the module resource.
+It's `sourceType` value would be `"source-text"`.
 
 Future proposals may then add support for [bindings lookup methods][],
 the [ModuleSource constructor][] and [instantiation][] support.
@@ -92,8 +94,6 @@ with ECMASCript module sources via `ModuleSource` additions.
 For WebAssembly modules, the existing `WebAssembly.Module` object is to be
 updated to have a prototype value of `ModuleSourcePrototype` in the
 [WebAssembly JS integration API][wasm-js-api].
-
-The existing value for `toStringTag` of `WebAssembly.Module` would remain.
 
 This allows workflows, as explained in the motivation, like the following:
 
