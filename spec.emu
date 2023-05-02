@@ -1189,7 +1189,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
               </td>
               <td>
                 <ins>The ModuleSource Object corresponding to this source Module Record's source phase (<emu-xref href="#sec-module-source-objects"></emu-xref>), if it has been requested.</ins>
-                <ins>This object must have a [[ModuleSourceRecord]] internal slot and %ModuleSourcePrototype% at the root of its prototype chain.</ins>
+                <ins>This object must have a [[ModuleSourceRecord]] internal slot and %AbstractModuleSourcePrototype% at the root of its prototype chain.</ins>
               </td>
             </tr>
             <tr>
@@ -1922,7 +1922,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
     <p>All Module Source Objects, including ModuleSource and host-defined types, have a prototype of %AbstractModuleSourcePrototype% and provide a [[ModuleSourceRecord]] internal slot.</p>
     <p>The ModuleSource Object represents the standard representation of the source of a Source Text Module Module record. Hosts may define their own Module Source Objects for other module record types.</p>
 
-    <emu-clause id="sec-%modulesourceprototype%-intrinsic-object">
+    <emu-clause id="sec-%abstractmodulesourceprototype%-intrinsic-object">
       <h1>The %AbstractModuleSourcePrototype% Object</h1>
       <p>The <dfn>%AbstractModuleSourcePrototype%</dfn> object:</p>
       <ul>
@@ -1932,9 +1932,9 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
         <li>has the following properties:</li>
       </ul>
 
-      <emu-clause id="sec-get-%modulesourceprototype%.@@tostringtag">
-        <h1>get %ModuleSourcePrototype% [ @@toStringTag ]</h1>
-        <p>%ModuleSourcePrototype%`[@@toStringTag]` is an accessor property whose set accessor function is *undefined*. Its get accessor function performs the following steps when called:</p>
+      <emu-clause id="sec-get-%abstractmodulesourceprototype%.@@tostringtag">
+        <h1>get %AbstractModuleSourcePrototype% [ @@toStringTag ]</h1>
+        <p>%AbstractModuleSourcePrototype%`[@@toStringTag]` is an accessor property whose set accessor function is *undefined*. Its get accessor function performs the following steps when called:</p>
         <emu-alg>
           1. Let _O_ be the *this* value.
           1. If _O_ is not an Object, return *undefined*.
