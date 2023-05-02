@@ -1939,7 +1939,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
           1. Let _O_ be the *this* value.
           1. If _O_ is not an Object, return *undefined*.
           1. If _O_ does not have a [[ModuleSourceRecord]] internal slot, return *undefined*.
-          1. Let _name_ be _O_.[[ModuleSourceRecord]].[[SourseClassName]]
+          1. Let _name_ be _O_.[[ModuleSourceRecord]].[[SourceClassName]]
           1. Assert: _name_ is a String.
           1. Return _name_.
         </emu-alg>
