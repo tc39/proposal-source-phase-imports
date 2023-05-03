@@ -89,7 +89,7 @@ with ECMAScript module sources via `ModuleSource.prototype` additions.
 ### Wasm Module Source
 
 For WebAssembly modules, the existing `WebAssembly.Module.prototype` object is to be
-updated to have a prototype value of `AbstractModuleSourcePrototype` in the
+updated to have a `[[Proto]]` of `AbstractModuleSourcePrototype` in the
 [WebAssembly JS integration API][wasm-js-api].
 
 This allows workflows, as explained in the motivation, like the following:
