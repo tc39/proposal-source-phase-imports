@@ -77,6 +77,8 @@ corresponding to the name of the specific module source subclass.
 
 For JavaScript modules, the module source phase is then specified to return
 a `ModuleSource` object, representing an ECMAScript Module Source.
+The `ModuleSource.prototype` is a `%ModuleSourcePrototype%`.
+The `[[Proto]]` of `%ModuleSourcePrototype%` is `%AbstractModuleSourcePrototype%`.
 
 Future proposals may then add support for [bindings lookup methods][],
 the [ModuleSource constructor][] and [instantiation][] support.
