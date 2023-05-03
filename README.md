@@ -67,8 +67,9 @@ Only the `source` import source phase is specified by this proposal.
 
 ### Defining Module Source
 
-The object provided by the module source phase must be an object with `%AbtractModuleSourcePrototype%` in its prototype chain, defined by this specification to be a minimal
-shared base prototype for a compiled modular resource.
+The object provided by the module source phase must be an object with
+`AbtractModuleSource.prototype` in its prototype chain, defined by this specification
+to be a minimal shared base prototype for a compiled modular resource.
 
 In addition it defines the `@@toStringTag` getter returning the constructor name string
 corresponding to the name of the specific module source subclass, with a strong
@@ -77,20 +78,19 @@ internal slot check.
 ### JS Module Source
 
 For JavaScript modules, the module source phase is then specified to return
-a `ModuleSource` object, representing an ECMAScript Module Source.
-The `ModuleSource.prototype` is a `%ModuleSourcePrototype%`.
-The `[[Proto]]` of `%ModuleSourcePrototype%` is `%AbstractModuleSourcePrototype%`.
+a `ModuleSource` object, representing an ECMAScript Module Source, where
+`ModuleSource.prototype.[[Proto]]` is `%AbstractModuleSource%.prototype`.
 
 Future proposals may then add support for [bindings lookup methods][],
 the [ModuleSource constructor][] and [instantiation][] support.
 
-New properties may be added to the base `AbstractModuleSourcePrototype`, or shared
+New properties may be added to the base `%AbstractModuleSource%.prototype`, or shared
 with ECMAScript module sources via `ModuleSource.prototype` additions.
 
 ### Wasm Module Source
 
 For WebAssembly modules, the existing `WebAssembly.Module.prototype` object is to be
-updated to have a `[[Proto]]` of `AbstractModuleSourcePrototype` in the
+updated to have a `[[Proto]]` of `%AbstractModuleSource%.prototype` in the
 [WebAssembly JS integration API][wasm-js-api].
 
 This allows workflows, as explained in the motivation, like the following:
@@ -121,7 +121,7 @@ In turn this enables [Wasm components to be able to import][]
 
 Any other host-defined module types may define their own host module sources. If a given module does not define a source representation for it's source, importing it with a "source" phase target fails with a `ReferenceError` at link time.
 
-Host-defined module sources must include `%AbstractModuleSourcePrototype%` in their prototype chain and support the `[[ModuleSourceRecord]]` internal slot containing the `@@toStringTag` brand check and underlying source host data.
+Host-defined module sources must include `%AbstractModuleSource%.prototype` in their prototype chain and support the `[[ModuleSourceRecord]]` internal slot containing the `@@toStringTag` brand check and underlying source host data.
 
 ## Security Benefits
 
