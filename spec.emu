@@ -1430,7 +1430,10 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
               1. Set _index_ to _index_ + 1.
               1. Append _module_ to _stack_.
               1. For each <del>String</del><ins>ModuleRequest</ins> _required_ of _module_.[[RequestedModules]], do
-                1. <ins>If _required_.[[Phase]] is ~evaluation~, then</ins>
+                1. <ins>If _required_.[[Phase]] is ~source~, then</ins>
+                  1. <ins>If _requiredModule_.[[ModuleSource]] is *null*, throw a *ReferenceError* exception.</ins>
+                1. <ins>Else,</ins>
+                  1. <ins>Assert: _required_.[[Phase]] is ~evaluation~.</ins>
                   1. Let _requiredModule_ be GetImportedModule(_module_, _required_<ins>.[[Specifier]]</ins>).
                   1. Set _index_ to ? InnerModuleLinking(_requiredModule_, _stack_, _index_).
                   1. If _requiredModule_ is a Cyclic Module Record, then
