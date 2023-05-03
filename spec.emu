@@ -1400,6 +1400,10 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
               1. Return ~unused~.
             </emu-alg>
           </emu-clause>
+        </emu-clause>
+
+        <emu-clause id="sec-moduledeclarationlinking" type="concrete method" oldids="sec-moduledeclarationinstantiation">
+          <h1>Link ( ): either a normal completion containing ~unused~ or a throw completion</h1>
 
           <emu-clause id="sec-InnerModuleLinking" type="abstract operation" oldids="sec-innermoduleinstantiation">
             <h1>
@@ -1449,6 +1453,9 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
               1. Return _index_.
             </emu-alg>
           </emu-clause>
+        </emu-clause>
+        <emu-clause id="sec-moduleevaluation" type="concrete method">
+          <h1>Evaluate ( ): a Promise</h1>
 
           <emu-clause id="sec-innermoduleevaluation" type="abstract operation">
             <h1>

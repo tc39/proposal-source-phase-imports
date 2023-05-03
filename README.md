@@ -49,9 +49,7 @@ not supported.
 const x = await import("<specifier>", { phase: "source" });
 ```
 
-For dynamic imports, import phase is specified in the same second
-attribute options bag that [import attributes][] are specified in, using the
-`phase` key.
+For dynamic imports, import phase is specified as a separate `phase` key in the options object to dyamic import, similar to how [import attributes][] use the `attributes` key.
 
 ### Loading Phase
 
