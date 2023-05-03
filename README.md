@@ -86,8 +86,8 @@ It's `sourceType` value would be `"source-text"`.
 Future proposals may then add support for [bindings lookup methods][],
 the [ModuleSource constructor][] and [instantiation][] support.
 
-New properties may be added to the base `ModuleSourcePrototype`, or shared
-with ECMASCript module sources via `ModuleSource` additions.
+New properties may be added to the base `AbstractModuleSourcePrototype`, or shared
+with ECMAScript module sources via `ModuleSource.prototype` additions.
 
 ### Wasm Module Source
 
