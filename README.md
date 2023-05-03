@@ -49,7 +49,7 @@ not supported.
 const x = await import("<specifier>", { phase: "source" });
 ```
 
-For dynamic imports, import phase is specified as a separate `phase` key in the options object to dyamic import, similar to how [import attributes][] use the `attributes` key.
+For dynamic imports, import phase is specified as a separate `phase` key in the options object to dyamic import, similar to how [import attributes][] use the `with` key.
 
 ### Loading Phase
 
@@ -70,8 +70,9 @@ Only the `source` import source phase is specified by this proposal.
 The object provided by the module source phase must be an object with `%AbtractModuleSourcePrototype%` in its prototype chain, defined by this specification to be a minimal
 shared base prototype for a compiled modular resource.
 
-In addition we define the `sourceType` getter returning the type string
-corresponding to the name of the specific module source subclass.
+In addition it defines the `@@toStringTag` getter returning the constructor name string
+corresponding to the name of the specific module source subclass, with a strong
+internal slot check.
 
 ### JS Module Source
 
@@ -118,7 +119,9 @@ In turn this enables [Wasm components to be able to import][]
 
 ### Other Module Types
 
-Any other host-defined module types may define their own host module sources. If a given module does not define a source representation for it's source, importing it with a "source" phase target fails.
+Any other host-defined module types may define their own host module sources. If a given module does not define a source representation for it's source, importing it with a "source" phase target fails with a `ReferenceError` at link time.
+
+Host-defined module sources must include `%AbstractModuleSourcePrototype%` in their prototype chain and support the `[[ModuleSourceRecord]]` internal slot containing the `@@toStringTag` brand check and underlying source host data.
 
 ## Security Benefits
 
