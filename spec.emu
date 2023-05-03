@@ -36,6 +36,16 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
             </tr>
             <tr>
               <td>
+                <ins>%AbstractModuleSource%</ins>
+              </td>
+              <td>
+              </td>
+              <td>
+                <ins>A class that all module source objects indirectly inherit from (<emu-xref href="#sec-abstractmodulesource-constructor"></emu-xref>)</ins>
+              </td>
+            </tr>
+            <tr>
+              <td>
                 %AsyncIteratorPrototype%
               </td>
               <td>
@@ -451,16 +461,6 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
               </td>
               <td>
                 The `Math` object (<emu-xref href="#sec-math-object"></emu-xref>)
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <ins>%AbstractModuleSourcePrototype%</ins>
-              </td>
-              <td>
-              </td>
-              <td>
-                <ins>An object that all module source objects indirectly inherit from (<emu-xref href="#sec-modulesource-constructor"></emu-xref>)</ins>
               </td>
             </tr>
             <tr>
@@ -920,7 +920,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
             1. <ins>If _moduleSourceObject_ is *null*, then</ins>
               1. <ins>Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, &laquo; a newly created *TypeError* object &raquo;).</ins>
               1. <ins>Return ~unused~.</ins>
-            1. <ins>Note: _moduleSourceObject_.[[Prototype]].[[Prototype]] should be %AbstractModuleSourcePrototype%.</ins>
+            1. <ins>Note: _moduleSourceObject_.[[Prototype]].[[Prototype]] should be %AbstractModuleSource.prototype%.</ins>
             1. <ins>Assert: _moduleSourceObject_ has a [[HostSourceData]] internal slot.</ins>
             1. <ins>Perform ! Call(_promiseCapability_.[[Resolve]], *undefined*, &laquo; _moduleSourceObject_ &raquo;).</ins>
             1. <ins>Return ~unused~.</ins>
@@ -1188,7 +1188,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
               </td>
               <td>
                 <ins>The ModuleSource Object corresponding to this source Module Record's source phase (<emu-xref href="#sec-module-source-objects"></emu-xref>), if it has been requested.</ins>
-                <ins>This object must have a [[ModuleSourceRecord]] internal slot and %AbstractModuleSourcePrototype% in its prototype chain.</ins>
+                <ins>This object must have a [[ModuleSourceRecord]] internal slot and %AbstractModuleSource.prototype% in its prototype chain.</ins>
               </td>
             </tr>
             <tr>
@@ -1739,22 +1739,67 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
   <emu-clause id="sec-module-source-objects">
     <h1><ins>Module Source Objects</ins></h1>
     <p>Module Source Objects represent modules in their source import phase, which are not linked, instantiated or executed.</p>
-    <p>All Module Source Objects, including ModuleSource and host-defined types, have a prototype of %AbstractModuleSourcePrototype% and provide a [[ModuleSourceRecord]] internal slot.</p>
+    <p>All Module Source Objects, including ModuleSource and host-defined types, have a prototype of %AbstractModuleSource%.prototype and provide a [[ModuleSourceRecord]] internal slot.</p>
     <p>The ModuleSource Object represents the standard representation of the source of a Source Text Module Module record. Hosts may define their own Module Source Objects for other module record types.</p>
 
-    <emu-clause id="sec-%abstractmodulesourceprototype%-intrinsic-object">
-      <h1>The %AbstractModuleSourcePrototype% Object</h1>
-      <p>The <dfn>%AbstractModuleSourcePrototype%</dfn> object:</p>
+    <emu-clause id="sec-abstractmodulesource-constructor">
+      <h1>The AbstractModuleSource Constructor</h1>
+      <p>The AbstractModuleSource constructor:</p>
       <ul>
-        <li>has a [[Prototype]] internal slot whose value is %Object.prototype%.</li>
-        <li>is an ordinary object.</li>
-        <li>does not have a global name or appear as a property of the global object.</li>
+        <li>is <dfn>%AbstractModuleSource%</dfn>.</li>
+        <li>is not a global object.</li>
+        <li>throws when called as a constructor.</li>
+        <li>also throws when called as a function rather than as a constructor.</li>
+        <li>has a *"length"* property whose value is *0*<sub>𝔽</sub>.</li>
+        <li>has a [[Prototype]] internal slot whose value is %Function.prototype%.</li>
+      </ul>
+
+      <emu-clause id="sec-%abstractmodulesource%">
+        <h1>%AbstractModuleSource% ( )</h1>
+        <p>This function performs the following steps when called:</p>
+        <emu-alg>
+          1. Throw a *TypeError* exception.
+        </emu-alg>
+        <p>The *"length"* property of this function is *+0*<sub>𝔽</sub>.</p>
+      </emu-clause>
+    </emu-clause>
+
+    <emu-clause id="sec-properties-of-the-%abstractmodulesource%-intrinsic-object">
+      <h1>Properties of the %AbstractModuleSource% Intrinsic Object</h1>
+      <p>The %AbstractModuleSource% intrinsic object:</p>
+      <ul>
+        <li>has a [[Prototype]] internal slot whose value is %Function.prototype%.</li>
+        <li>has a *"name"* property whose value is *"AbstractModuleSource"*.</li>
         <li>has the following properties:</li>
       </ul>
 
-      <emu-clause id="sec-get-%abstractmodulesourceprototype%.@@tostringtag">
-        <h1>get %AbstractModuleSourcePrototype% [ @@toStringTag ]</h1>
-        <p>%AbstractModuleSourcePrototype%`[@@toStringTag]` is an accessor property whose set accessor function is *undefined*. Its get accessor function performs the following steps when called:</p>
+      <emu-clause id="sec-%typedarray%.prototype">
+        <h1>%AbstractModuleSource%.prototype</h1>
+        <p>The initial value of %AbstractModuleSource%`.prototype` is the %AbstractModuleSource% prototype object.</p>
+        <p>This property has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *false* }.</p>
+      </emu-clause>
+    </emu-clause>
+
+    <emu-clause id="sec-properties-of-the-%abstractmodulesource%-prototype-object">
+      <h1>Properties of the %AbstractModuleSource% Prototype Object</h1>
+      <p>The <dfn>%AbstractModuleSource% prototype object</dfn>:</p>
+      <ul>
+        <li>has a [[Prototype]] internal slot whose value is %Object.prototype%.</li>
+        <li>is <dfn>%AbstractModuleSource.prototype%</dfn>.</li>
+        <li>is an ordinary object.</li>
+        <li>does not have a global name or appear as a property of the global object.</li>
+        <li>does not have a [[ModuleSourceRecord]] slot that is specific to _AbstractModuleSource_ and _AbstractModuleSource_ subclass instance objects.</li>
+        <li>has the following properties:</li>
+      </ul>
+
+      <emu-clause id="sec-%abstractmodulesource%.prototype.constructor">
+        <h1>%AbstractModuleSource%.prototype.constructor</h1>
+        <p>The initial value of %AbstractModuleSource%`.prototype.constructor` is %AbstractModuleSource%.</p>
+      </emu-clause>
+
+      <emu-clause id="sec-get-%abstractmodulesource%.prototype.@@tostringtag">
+        <h1>get %AbstractModuleSource%.prototype [ @@toStringTag ]</h1>
+        <p>%AbstractModuleSource%.prototype `[@@toStringTag]` is an accessor property whose set accessor function is *undefined*. Its get accessor function performs the following steps when called:</p>
         <emu-alg>
           1. Let _O_ be the *this* value.
           1. If _O_ is not an Object, return *undefined*.
@@ -1776,7 +1821,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
       <ul>
         <li>is <dfn>%ModuleSource%</dfn>.</li>
         <li>is the initial value of the *"ModuleSource"* property of the global object.</li>
-        <li>has a [[Prototype]] internal slot whose value is %AbstractModuleSourcePrototype%.</li>
+        <li>has a [[Prototype]] internal slot whose value is %AbstractModuleSource.prototype%.</li>
         <li>does not have a [[ModuleSourceRecord]] internal slot.
       </ul>
     </emu-clause>
@@ -1786,9 +1831,15 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
       <p>The <dfn>ModuleSource prototype object</dfn>:</p>
       <ul>
         <li>is <dfn>%ModuleSource.prototype%</dfn>.</li>
-        <li>has a [[Prototype]] internal slot whose value is %AbstractModuleSourcePrototype%.</li>
-        <li>is not a ModuleSource instance or a %AbstractModuleSourcePrototype% and does not have a [[ModuleSourceRecord]] internal slot.
+        <li>has a [[Prototype]] internal slot whose value is %AbstractModuleSource.prototype%.</li>
+        <li>is not a ModuleSource instance or a %AbstractModuleSource.prototype% and does not have a [[ModuleSourceRecord]] internal slot.
+        <li>has the following properties:</li>
       </ul>
+
+      <emu-clause id="sec-modulesource.prototype.constructor">
+        <h1>ModuleSource.prototype.constructor</h1>
+        <p>The initial value of `ModuleSource.prototype.constructor` is ModuleSource.</p>
+      </emu-clause>
     </emu-clause>
 
     <emu-clause id="sec-properties-of-modulesource-instances">
