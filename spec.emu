@@ -1189,7 +1189,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
               </td>
               <td>
                 <ins>The ModuleSource Object corresponding to this source Module Record's source phase (<emu-xref href="#sec-module-source-objects"></emu-xref>), if it has been requested.</ins>
-                <ins>This object must have a [[ModuleSourceRecord]] internal slot and %AbstractModuleSourcePrototype% at the root of its prototype chain.</ins>
+                <ins>This object must have a [[ModuleSourceRecord]] internal slot and %AbstractModuleSourcePrototype% in its prototype chain.</ins>
               </td>
             </tr>
             <tr>
