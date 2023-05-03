@@ -69,8 +69,8 @@ Only the `source` import source phase is specified by this proposal.
 
 ### Defining Module Source
 
-The object provided by the module source phase must have a prototype set to the
-`ModuleSourcePrototype` object, defined by this specification to be a minimal
+The object provided by the module source phase should have a prototype set to the
+`%AbtractModuleSourcePrototype%` object, defined by this specification to be a minimal
 shared base prototype for a compiled modular resource.
 
 In addition we define the `sourceType` getter returning the type string
