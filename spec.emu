@@ -4,7 +4,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/8.4/styles/github.min.css">
 <script src="./spec.js"></script>
 <pre class="metadata">
-title: Import Source Reflection
+title: Source Phase Imports
 stage: 2
 contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
 </pre>
@@ -1028,10 +1028,9 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
           1. <ins>For each ModuleRequest Record _mr_ of _additionalRequests_, do</ins>
             1. <ins>Let _found_ be *false*.</ins>
             1. <ins>For each ModuleRequest Record _mr2_ of _requests_, do</ins>
-              1. <ins>If _mr_.[[Specifer]] is _mr2_.[[Specifer]], then</ins>
+              1. <ins>If _mr_.[[Specifer]] is _mr2_.[[Specifer]] and _mr_.[[Phase]] is _mr2_.[[Phase]], then</ins>
                 1. <ins>Assert: _found_ is *false*.</ins>
                 1. <ins>Set _found_ to *true*.</ins>
-                1. <ins>If _mr2_.[[Phase]] is ~source~ and _mr_.[[Phase]] is ~evaluation~, set _mr2_.[[Phase]] to ~evaluation~.</ins>
             1. <del>If _moduleNames_ does not contain _name_, then</del>
             1. <ins>If _found_ is *false*, then</ins>
               1. Append <del>_name_</del><ins>_mr_</ins> to <del>_moduleNames_</del><ins>_requests_</ins>.
@@ -1533,66 +1532,6 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
       <emu-clause id="sec-source-text-module-records">
         <h1>Source Text Module Records</h1>
 
-        <emu-clause id="sec-resolveexport" type="concrete method" number="3">
-          <h1>
-            ResolveExport (
-              _exportName_: a String,
-              optional _resolveSet_: a List of Records with fields [[Module]] (a Module Record) and [[ExportName]] (a String),
-            ): a ResolvedBinding Record, *null*, or ~ambiguous~
-          </h1>
-          <dl class="header">
-            <dt>for</dt>
-            <dd>a Source Text Module Record _module_</dd>
-
-            <dt>description</dt>
-            <dd>
-              <p>ResolveExport attempts to resolve an imported binding to the actual defining module and local binding name. The defining module may be the module represented by the Module Record this method was invoked on or some other module that is imported by that module. The parameter _resolveSet_ is used to detect unresolved circular import/export paths. If a pair consisting of specific Module Record and _exportName_ is reached that is already in _resolveSet_, an import circularity has been encountered. Before recursively calling ResolveExport, a pair consisting of _module_ and _exportName_ is added to _resolveSet_.</p>
-              <p>If a defining module is found, a ResolvedBinding Record { [[Module]], [[BindingName]] } is returned. This record identifies the resolved binding of the originally requested export, unless this is the export of a namespace with no local binding. In this case, [[BindingName]] will be set to ~namespace~. If no definition was found or the request is found to be circular, *null* is returned. If the request is found to be ambiguous, ~ambiguous~ is returned.</p>
-            </dd>
-          </dl>
-
-          <emu-alg>
-            1. Assert: _module_.[[Status]] is not ~new~.
-            1. If _resolveSet_ is not present, set _resolveSet_ to a new empty List.
-            1. For each Record { [[Module]], [[ExportName]] } _r_ of _resolveSet_, do
-              1. If _module_ and _r_.[[Module]] are the same Module Record and SameValue(_exportName_, _r_.[[ExportName]]) is *true*, then
-                1. Assert: This is a circular import request.
-                1. Return *null*.
-            1. Append the Record { [[Module]]: _module_, [[ExportName]]: _exportName_ } to _resolveSet_.
-            1. For each ExportEntry Record _e_ of _module_.[[LocalExportEntries]], do
-              1. If SameValue(_exportName_, _e_.[[ExportName]]) is *true*, then
-                1. Assert: _module_ provides the direct binding for this export.
-                1. Return ResolvedBinding Record { [[Module]]: _module_, [[BindingName]]: _e_.[[LocalName]] }.
-            1. For each ExportEntry Record _e_ of _module_.[[IndirectExportEntries]], do
-              1. If SameValue(_exportName_, _e_.[[ExportName]]) is *true*, then
-                1. Let _importedModule_ be GetImportedModule(_module_, _e_.[[ModuleRequest]]<ins>.[[Specifier]]</ins>).
-                1. If _e_.[[ImportName]] is ~all~, then
-                  1. Assert: _module_ does not provide the direct binding for this export.
-                  1. Return ResolvedBinding Record { [[Module]]: _importedModule_, [[BindingName]]: ~namespace~ }.
-                1. Else,
-                  1. Assert: _module_ imports a specific binding for this export.
-                  1. Return _importedModule_.ResolveExport(_e_.[[ImportName]], _resolveSet_).
-            1. If SameValue(_exportName_, *"default"*) is *true*, then
-              1. Assert: A `default` export was not explicitly defined by this module.
-              1. Return *null*.
-              1. NOTE: A `default` export cannot be provided by an `export * from "mod"` declaration.
-            1. Let _starResolution_ be *null*.
-            1. For each ExportEntry Record _e_ of _module_.[[StarExportEntries]], do
-              1. Let _importedModule_ be GetImportedModule(_module_, _e_.[[ModuleRequest]]<ins>.[[Specifier]]</ins>).
-              1. Let _resolution_ be _importedModule_.ResolveExport(_exportName_, _resolveSet_).
-              1. If _resolution_ is ~ambiguous~, return ~ambiguous~.
-              1. If _resolution_ is not *null*, then
-                1. Assert: _resolution_ is a ResolvedBinding Record.
-                1. If _starResolution_ is *null*, set _starResolution_ to _resolution_.
-                1. Else,
-                  1. Assert: There is more than one `*` import that includes the requested name.
-                  1. If _resolution_.[[Module]] and _starResolution_.[[Module]] are not the same Module Record, return ~ambiguous~.
-                  1. If _resolution_.[[BindingName]] is not _starResolution_.[[BindingName]] and either _resolution_.[[BindingName]] or _starResolution_.[[BindingName]] is ~namespace~, return ~ambiguous~.
-                  1. If _resolution_.[[BindingName]] is a String, _starResolution_.[[BindingName]] is a String, and SameValue(_resolution_.[[BindingName]], _starResolution_.[[BindingName]]) is *false*, return ~ambiguous~.
-            1. Return _starResolution_.
-          </emu-alg>
-        </emu-clause>
-
         <emu-clause id="sec-source-text-module-record-initialize-environment" type="concrete method">
           <h1>InitializeEnvironment ( ): either a normal completion containing ~unused~ or a throw completion</h1>
           <dl class="header">
@@ -1611,11 +1550,16 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
             1. Let _env_ be NewModuleEnvironment(_realm_.[[GlobalEnv]]).
             1. Set _module_.[[Environment]] to _env_.
             1. For each ImportEntry Record _in_ of _module_.[[ImportEntries]], do
-              1. Let _importedModule_ be GetImportedModule(_module_, _in_.[[ModuleRequest]]<ins>.[[Specifier]]</ins>).
+              1. Let _importedModule_ be GetImportedModule(_module_, _in_.[[ModuleRequest]]).
               1. If _in_.[[ImportName]] is ~namespace-object~, then
                 1. Let _namespace_ be GetModuleNamespace(_importedModule_).
                 1. Perform ! _env_.CreateImmutableBinding(_in_.[[LocalName]], *true*).
                 1. Perform ! _env_.InitializeBinding(_in_.[[LocalName]], _namespace_).
+              1. <ins>Else if _in_.[[ImportName]] is ~source~, then</ins>
+                1. <ins>Let _moduleSourceObject_ be _importedModule_.[[ModuleSourceObject]].</ins>
+                1. <ins>If _moduleSourceObject_ is *null*, throw a *TypeError* exception.</ins>
+                1. <ins>Perform ! _env_.CreateImmutableBinding(_in_.[[LocalName]], *true*).</ins>
+                1. <ins>Perform ! _env_.InitializeBinding(_in_.[[LocalName]], _moduleSourceObject_).</ins>
               1. Else,
                 1. Let _resolution_ be _importedModule_.ResolveExport(_in_.[[ImportName]]).
                 1. If _resolution_ is either *null* or ~ambiguous~, throw a *SyntaxError* exception.
@@ -1766,144 +1710,10 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
       </emu-alg>
       <emu-grammar><ins>ImportDeclaration : `import` `source` ImportedBinding FromClause `;`</ins></emu-grammar>
       <emu-alg>
-        1. <ins>Let _module_ be SV of |FromClause|.</ins>
-        1. <ins>Return ImportEntriesForModule of |ImportClause| with arguments _module_ and ~source~.</ins>
+        1. <ins>Let _localName_ be the sole element of BoundNames of |ImportedBinding|.</ins>
+        1. <ins>Let _entry_ be the ImportEntry Record { [[ModuleRequest]]: _module_, [[ImportName]]: ~source~, [[LocalName]]: _localName_ }.</ins>
+        1. <ins>Return « _entry_ »</ins>.
       </emu-alg>
-    </emu-clause>
-
-    <emu-clause id="sec-static-semantics-importentriesformodule" type="sdo">
-      <h1>
-        Static Semantics: ImportEntriesForModule (
-          _module_: a String,
-          <ins>_phase_: ~source~ or ~evaluation~,</ins>
-        ): a List of ImportEntry Records
-      </h1>
-      <dl class="header">
-      </dl>
-      <emu-grammar>ImportClause : ImportedDefaultBinding `,` NameSpaceImport</emu-grammar>
-      <emu-alg>
-        1. Let _entries1_ be ImportEntriesForModule of |ImportedDefaultBinding| with arguments _module_ <ins>and _phase_</ins>.
-        1. Let _entries2_ be ImportEntriesForModule of |NameSpaceImport| with arguments _module_ <ins>and _phase_</ins>.
-        1. Return the list-concatenation of _entries1_ and _entries2_.
-      </emu-alg>
-      <emu-grammar>ImportClause : ImportedDefaultBinding `,` NamedImports</emu-grammar>
-      <emu-alg>
-        1. Let _entries1_ be ImportEntriesForModule of |ImportedDefaultBinding| with arguments _module_ <ins>and _phase_</ins>.
-        1. Let _entries2_ be ImportEntriesForModule of |NamedImports| with arguments _module_ <ins>and _phase_</ins>.
-        1. Return the list-concatenation of _entries1_ and _entries2_.
-      </emu-alg>
-      <emu-grammar>ImportedDefaultBinding : ImportedBinding</emu-grammar>
-      <emu-alg>
-        1. <ins>Assert: _phase_ is ~evaluation~.</ins>
-        1. Let _localName_ be the sole element of BoundNames of |ImportedBinding|.
-        1. Let _defaultEntry_ be the ImportEntry Record { [[ModuleRequest]]: _module_, <ins>[[Phase]]: _phase_,</ins> [[ImportName]]: *"default"*, [[LocalName]]: _localName_ }.
-        1. Return « _defaultEntry_ ».
-      </emu-alg>
-      <emu-grammar>NameSpaceImport : `*` `as` ImportedBinding</emu-grammar>
-      <emu-alg>
-        1. Let _localName_ be the StringValue of |ImportedBinding|.
-        1. Let _entry_ be the ImportEntry Record { [[ModuleRequest]]: _module_, <ins>[[Phase]]: _phase_,</ins> [[ImportName]]: ~namespace-object~, [[LocalName]]: _localName_ }.
-        1. Return « _entry_ ».
-      </emu-alg>
-      <emu-grammar>NamedImports : `{` `}`</emu-grammar>
-      <emu-alg>
-        1. Return a new empty List.
-      </emu-alg>
-      <emu-grammar>ImportsList : ImportsList `,` ImportSpecifier</emu-grammar>
-      <emu-alg>
-        1. <ins>Assert: _phase_ is ~evaluation~.</ins>
-        1. Let _specs1_ be the ImportEntriesForModule of |ImportsList| with arguments _module_ <ins>and _phase_</ins>.
-        1. Let _specs2_ be the ImportEntriesForModule of |ImportSpecifier| with arguments _module_ <ins>and _phase_</ins>.
-        1. Return the list-concatenation of _specs1_ and _specs2_.
-      </emu-alg>
-      <emu-grammar>ImportSpecifier : ImportedBinding</emu-grammar>
-      <emu-alg>
-        1. <ins>Assert: _phase_ is ~evaluation~.</ins>
-        1. Let _localName_ be the sole element of BoundNames of |ImportedBinding|.
-        1. Let _entry_ be the ImportEntry Record { [[ModuleRequest]]: _module_, <ins>[[Phase]]: _phase_,</ins> [[ImportName]]: _localName_, [[LocalName]]: _localName_ }.
-        1. Return « _entry_ ».
-      </emu-alg>
-      <emu-grammar>ImportSpecifier : ModuleExportName `as` ImportedBinding</emu-grammar>
-      <emu-alg>
-        1. <ins>Assert: _phase_ is ~evaluation~.</ins>
-        1. Let _importName_ be the StringValue of |ModuleExportName|.
-        1. Let _localName_ be the StringValue of |ImportedBinding|.
-        1. Let _entry_ be the ImportEntry Record { [[ModuleRequest]]: _module_, <ins>[[Phase]]: _phase_,</ins> [[ImportName]]: _importName_, [[LocalName]]: _localName_ }.
-        1. Return « _entry_ ».
-      </emu-alg>
-    </emu-clause>
-  </emu-clause>
-
-  <emu-clause id="sec-exports">
-    <h1>Exports</h1>
-
-    <emu-clause id="sec-static-semantics-exportentries" type="sdo" number="4">
-      <h1>Static Semantics: ExportEntries ( ): a List of ExportEntry Records</h1>
-      <dl class="header">
-      </dl>
-      <emu-grammar>Module : [empty]</emu-grammar>
-      <emu-alg>
-        1. Return a new empty List.
-      </emu-alg>
-      <emu-grammar>ModuleItemList : ModuleItemList ModuleItem</emu-grammar>
-      <emu-alg>
-        1. Let _entries1_ be ExportEntries of |ModuleItemList|.
-        1. Let _entries2_ be ExportEntries of |ModuleItem|.
-        1. Return the list-concatenation of _entries1_ and _entries2_.
-      </emu-alg>
-      <emu-grammar>
-        ModuleItem :
-          ImportDeclaration
-          StatementListItem
-      </emu-grammar>
-      <emu-alg>
-        1. Return a new empty List.
-      </emu-alg>
-      <emu-grammar>ExportDeclaration : `export` ExportFromClause FromClause `;`</emu-grammar>
-      <emu-alg>
-        1. Let _module_ be <del>the sole element of ModuleRequests</del><ins>SV</ins> of |FromClause|.
-        1. Return ExportEntriesForModule of |ExportFromClause| with argument _module_.
-      </emu-alg>
-      <emu-grammar>ExportDeclaration : `export` NamedExports `;`</emu-grammar>
-      <emu-alg>
-        1. Return ExportEntriesForModule of |NamedExports| with argument *null*.
-      </emu-alg>
-      <emu-grammar>ExportDeclaration : `export` VariableStatement</emu-grammar>
-      <emu-alg>
-        1. Let _entries_ be a new empty List.
-        1. Let _names_ be the BoundNames of |VariableStatement|.
-        1. For each element _name_ of _names_, do
-          1. Append the ExportEntry Record { [[ModuleRequest]]: *null*, [[ImportName]]: *null*, [[LocalName]]: _name_, [[ExportName]]: _name_ } to _entries_.
-        1. Return _entries_.
-      </emu-alg>
-      <emu-grammar>ExportDeclaration : `export` Declaration</emu-grammar>
-      <emu-alg>
-        1. Let _entries_ be a new empty List.
-        1. Let _names_ be the BoundNames of |Declaration|.
-        1. For each element _name_ of _names_, do
-          1. Append the ExportEntry Record { [[ModuleRequest]]: *null*, [[ImportName]]: *null*, [[LocalName]]: _name_, [[ExportName]]: _name_ } to _entries_.
-        1. Return _entries_.
-      </emu-alg>
-      <emu-grammar>ExportDeclaration : `export` `default` HoistableDeclaration</emu-grammar>
-      <emu-alg>
-        1. Let _names_ be BoundNames of |HoistableDeclaration|.
-        1. Let _localName_ be the sole element of _names_.
-        1. Return a List whose sole element is a new ExportEntry Record { [[ModuleRequest]]: *null*, [[ImportName]]: *null*, [[LocalName]]: _localName_, [[ExportName]]: *"default"* }.
-      </emu-alg>
-      <emu-grammar>ExportDeclaration : `export` `default` ClassDeclaration</emu-grammar>
-      <emu-alg>
-        1. Let _names_ be BoundNames of |ClassDeclaration|.
-        1. Let _localName_ be the sole element of _names_.
-        1. Return a List whose sole element is a new ExportEntry Record { [[ModuleRequest]]: *null*, [[ImportName]]: *null*, [[LocalName]]: _localName_, [[ExportName]]: *"default"* }.
-      </emu-alg>
-      <emu-grammar>ExportDeclaration : `export` `default` AssignmentExpression `;`</emu-grammar>
-      <emu-alg>
-        1. Let _entry_ be the ExportEntry Record { [[ModuleRequest]]: *null*, [[ImportName]]: *null*, [[LocalName]]: *"\*default\*"*, [[ExportName]]: *"default"* }.
-        1. Return « _entry_ ».
-      </emu-alg>
-      <emu-note>
-        <p>*"\*default\*"* is used within this specification as a synthetic name for anonymous default export values. See <emu-xref href="#note-star-default-star">this note</emu-xref> for more details.</p>
-      </emu-note>
     </emu-clause>
   </emu-clause>
 </emu-clause>
