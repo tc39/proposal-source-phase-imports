@@ -91,8 +91,8 @@ with ECMASCript module sources via `ModuleSource` additions.
 
 ### Wasm Module Source
 
-For WebAssembly modules, the existing `WebAssembly.Module` object is to be
-updated to have a prototype value of `ModuleSourcePrototype` in the
+For WebAssembly modules, the existing `WebAssembly.Module.prototype` object is to be
+updated to have a prototype value of `AbstractModuleSourcePrototype` in the
 [WebAssembly JS integration API][wasm-js-api].
 
 This allows workflows, as explained in the motivation, like the following:
@@ -121,7 +121,7 @@ In turn this enables [Wasm components to be able to import][]
 
 ### Other Module Types
 
-Any other host-defined module types may define their own host module sources. If no module phase import is defined, it will fail during the loading phase.
+Any other host-defined module types may define their own host module sources. If a given module does not define a source representation for it's source, importing it with a "source" phase target fails.
 
 ## Security Benefits
 
