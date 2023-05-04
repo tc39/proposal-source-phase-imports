@@ -82,7 +82,7 @@ a `ModuleSource` object, representing an ECMAScript Module Source, where
 `ModuleSource.prototype.[[Proto]]` is `%AbstractModuleSource%.prototype`.
 
 Future proposals may then add support for [bindings lookup methods][],
-the [ModuleSource constructor][] and [instantiation][] support.
+the [ModuleSource constructor][module soruce] and [instantiation][] support.
 
 New properties may be added to the base `%AbstractModuleSource%.prototype`, or shared
 with ECMAScript module sources via `ModuleSource.prototype` additions.
@@ -161,7 +161,6 @@ needed. See the security improvements section for more details.
     https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy
 [ECMA-262 ES modules HostLoadImportedModule refactoring]:
     https://github.com/tc39/ecma262/pull/2905
-[ModuleSource constructor]: 
 [Wasm components to be able to import]:
     https://github.com/WebAssembly/component-model/blob/main/design/mvp/Explainer.md#ESM-integration
 [Wasm module object]:
