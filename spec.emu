@@ -1188,7 +1188,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
               </td>
               <td>
                 <ins>The ModuleSource Object corresponding to this source Module Record's source phase (<emu-xref href="#sec-module-source-objects"></emu-xref>), if it has been requested.</ins>
-                <ins>This object must have a [[ModuleSourceRecord]] internal slot and %AbstractModuleSource.prototype% in its prototype chain.</ins>
+                <ins>This object must have a [[ModuleSourceRecord]] internal slot and should have %AbstractModuleSource.prototype% in its prototype chain.</ins>
               </td>
             </tr>
             <tr>
@@ -1431,7 +1431,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
               1. Append _module_ to _stack_.
               1. For each <del>String</del><ins>ModuleRequest</ins> _required_ of _module_.[[RequestedModules]], do
                 1. <ins>If _required_.[[Phase]] is ~source~, then</ins>
-                  1. <ins>If _requiredModule_.[[ModuleSource]] is *null*, throw a *ReferenceError* exception.</ins>
+                  1. <ins>If _requiredModule_.[[ModuleSourceObject]] is *null*, throw a *ReferenceError* exception.</ins>
                 1. <ins>Else,</ins>
                   1. <ins>Assert: _required_.[[Phase]] is ~evaluation~.</ins>
                   1. Let _requiredModule_ be GetImportedModule(_module_, _required_<ins>.[[Specifier]]</ins>).
@@ -1838,7 +1838,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
 
       <emu-clause id="sec-modulesource.prototype.constructor">
         <h1>ModuleSource.prototype.constructor</h1>
-        <p>The initial value of `ModuleSource.prototype.constructor` is ModuleSource.</p>
+        <p>The initial value of `ModuleSource.prototype.constructor` is %ModuleSource%.</p>
       </emu-clause>
     </emu-clause>
 
