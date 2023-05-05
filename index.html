@@ -3945,7 +3945,7 @@ li.menu-search-result-term:before {
           </li>
           <li>
             <p><ins>The <code>[[Phase]]</code> can be used to inform that the preloading should not proceed with any preloading at all, but should not affect the identity of the resultant <emu-xref href="#sec-abstract-module-records" id="_ref_119"><a href="#sec-abstract-module-records">Module Record</a></emu-xref>.</ins></p>
-            <p><ins>When the <code>"source"</code> phase is specified, the returned <emu-xref href="#sec-abstract-module-records" id="_ref_120"><a href="#sec-abstract-module-records">Module Record</a></emu-xref> should either have its <code>[[ModuleSourceObject]]</code> set unless it is not supported in the environment in which case <emu-val>null</emu-val> can be returned and a ReferenceError will be thrown.</ins></p>
+            <p><ins>When the <code>"source"</code> phase is specified, the returned <emu-xref href="#sec-abstract-module-records" id="_ref_120"><a href="#sec-abstract-module-records">Module Record</a></emu-xref> should either have its <code>[[ModuleSourceObject]]</code> set, or if it is not supported in the environment <emu-val>null</emu-val> can be returned and a ReferenceError will be thrown.</ins></p>
           </li>
         </ul>
 
