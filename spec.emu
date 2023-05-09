@@ -64,18 +64,57 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
                 1. Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, &laquo; a newly created *TypeError* object &raquo;).
                 1. Return _promiseCapability_.[[Promise]].
               1. Set _phase_ to ~source~.
-          1. Let _moduleRequest_ be a new ModuleRequest Record { [[Specifier]]: _specifierString_, [[Phase]]: _phase_ }.
-          1. Perform HostLoadImportedModule(_referrer_, _moduleRequest_, ~empty~, _promiseCapability_).
+          1. Let _state_ be the DynamicImportState Record { [[PromiseCapability]]: _promiseCapability_, [[Phase]]: _phase_ }.
+          1. Perform HostLoadImportedModule(_referrer_, _specifierString_, ~empty~, _state_).
           1. Return _promiseCapability_.[[Promise]].
         </emu-alg>
       </emu-clause>
 
+      <p><ins>A <dfn id="dynamicimportstate-record" variants="DynamicImportState Records">DynamicImportState Record</dfn> is a Record that contains information about the loading process of a module graph. It's used to continue loading after a call to HostLoadImportedModule. Each DynamicImportState Record has the fields defined in <emu-xref href="#table-dynamicimportstate-record-fields"></emu-xref>:</ins></p>
+      <emu-table id="table-dynamicimportstate-record-fields" caption="DynamicImportState Record Fields">
+        <table>
+          <tr>
+            <th>
+              Field Name
+            </th>
+            <th>
+              Value Type
+            </th>
+            <th>
+              Meaning
+            </th>
+          </tr>
+          <tr>
+            <td>
+              <ins>[[PromiseCapability]]</ins>
+            </td>
+            <td>
+              <ins>a PromiseCapability Record</ins>
+            </td>
+            <td>
+              <ins>The promise to resolve when the dynamic import finishes.</ins>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <ins>[[Phase]]</ins>
+            </td>
+            <td>
+              <ins>~source~ or ~evaluation~</ins>
+            </td>
+            <td>
+              <ins>The target import phase. It's ~source~ when using the `phase: "source"` option, and ~evaluation~ otherwise.</ins>
+            </td>
+          </tr>
+        </table>
+      </emu-table>
+
       <emu-clause id="sec-ContinueDynamicImport" type="abstract operation">
         <h1>
           ContinueDynamicImport (
-            _promiseCapability_: a PromiseCapability Record,
+            <del>_promiseCapability_: a PromiseCapability Record,</del>
+            <ins>_state_: a DynamicImportState Record,</ins>
             _moduleCompletion_: either a normal completion containing a Module Record or a throw completion,
-            <ins>_phase_: ~source~ or ~evaluation.</ins>
           ): ~unused~
         </h1>
         <dl class="header">
@@ -83,12 +122,13 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
           <dd>It completes the process of a dynamic import originally started by an <emu-xref href="#sec-import-calls">`import()`</emu-xref> call, resolving or rejecting the promise returned by that call as appropriate.</dd>
         </dl>
         <emu-alg>
+          1. <ins>Let _promiseCapability_ be _state_.[[PromiseCapability]].</ins>
           1. If _moduleCompletion_ is an abrupt completion, then
             1. Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, &laquo; _moduleCompletion_.[[Value]] &raquo;).
             1. Return ~unused~.
           1. Let _module_ be _moduleCompletion_.[[Value]].
-          1. <ins>If _phase_ is ~source~, then</ins>
-            1. <ins>Let _moduleSourceObject_ be _module_.GetModuleSource().</ins>
+          1. <ins>If _state_.[[Phase]] is ~source~, then</ins>
+            1. <ins>Let _moduleSourceObject_ be Completion(_module_.GetModuleSource()).</ins>
             1. <ins>If _moduleSourceObject_ is an abrupt completion, then</ins>
               1. <ins>Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, &laquo; _moduleSourceObject_.[[Value]] &raquo;).</ins>
             1. <ins>Else,</ins>
@@ -198,9 +238,10 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
           1. <ins>For each ModuleRequest Record _mr_ of _additionalRequests_, do</ins>
             1. <ins>Let _found_ be *false*.</ins>
             1. <ins>For each ModuleRequest Record _mr2_ of _requests_, do</ins>
-              1. <ins>If _mr_.[[Specifer]] is _mr2_.[[Specifer]] and _mr_.[[Phase]] is _mr2_.[[Phase]], then</ins>
+              1. <ins>If _mr_.[[Specifer]] is _mr2_.[[Specifer]], then</ins>
                 1. <ins>Assert: _found_ is *false*.</ins>
                 1. <ins>Set _found_ to *true*.</ins>
+                1. <ins>If _mr2_.[[Phase]] is ~source~ and _mr_.[[Phase]] is ~evaluation~, set _mr2_.[[Phase]] to ~evaluation~.</ins>
             1. <del>If _moduleNames_ does not contain _name_, then</del>
             1. <ins>If _found_ is *false*, then</ins>
               1. Append <del>_name_</del><ins>_mr_</ins> to <del>_moduleNames_</del><ins>_requests_</ins>.
@@ -252,7 +293,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
       <emu-clause id="sec-modulesource-record">
         <h1><ins>ModuleSource Records</ins></h1>
 
-        <p>A <dfn id="modulesource-record" variants="ModuleSource Records">ModuleSource Record</dfn> represents the request to import a module as an unlinked source. It consists of the following fields:</p>
+        <p>A <dfn id="modulesource-record" variants="ModuleSource Records">ModuleSource Record</dfn> represents the request to import a module up to a given phase. It consists of the following fields:</p>
         <emu-table id="table-modulesource-record-fields" caption="ModuleSource Record fields">
           <table>
             <tbody>
@@ -292,6 +333,8 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
             </tbody>
           </table>
         </emu-table>
+
+        <emu-note type="editor">In general, this proposal replaces places where module specifiers are passed around with ModuleRequest Records. For example, several syntax-directed operations, such as ModuleRequests produce Lists of ModuleRequest Records rather than Lists of Strings which are interpreted as module specifiers. Some algorithms like ImportEntries and ImportEntriesForModule pass around ModuleRequest Records rather than Strings, in a way which doesn't require any particular textual change. Additionally, record fields in Cyclic Module Records and Source Text Module Records which contained Lists of Strings are replaced by Lists of ModuleRequest Records, as indicated above.</emu-note>
       </emu-clause>
 
       <emu-clause id="sec-abstract-module-records">
@@ -417,15 +460,12 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
             </tr>
             <tr>
               <td>
-                <ins>GetModuleSource(): either a normal completion containing an Object or a throw completion</ins>
+                <ins>GetModuleSource()</ins>
               </td>
               <td>
-                <p><ins>Returns a completion for the ModuleSource Object corresponding to this source Module Record's source phase (<emu-xref href="#sec-module-source-objects"></emu-xref>), if it has been requested.</ins></p>
-
-                <emu-note type="editor">
-                  <ins>When called on the same Module Record, the Object for the normal completion of GetModuleSource must be an idempotent unique return value.</ins>
-                  <ins>For a normal completion, the Object is expected to be a subclass of %AbstractModuleSource%, with an internal slot `[[ModuleSourceRecord]]`.</ins>
-                </emu-note>
+                <p><ins>It returns either a normal completion completion for the ModuleSource Object corresponding to this source Module Record's source phase (<emu-xref href="#sec-module-source-objects"></emu-xref>), or a throw completion.</ins></p>
+                <ins>When called multiple times on the same Module Record, if GetModuleSource() returns a normal completion it must always return a normal completion containing the same object.</ins>
+                <ins>The returned object should be a subclass of %AbstractModuleSource%, and it must have an internal slot [[ModuleSourceRecord]].</ins>
               </td>
             </tr>
           </table>
@@ -502,7 +542,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
                 a List of <del>Strings</del><ins>ModuleRequest Records</ins>
               </td>
               <td>
-                A List of all the |ModuleSpecifier| strings used by the module represented by this record to request the importation of a module, <ins>along with their associated phase (~source~ or ~evaluation~)</ins>. The List is in source text occurrence order.
+                A List of all the |ModuleSpecifier| strings used by the module represented by this record to request the importation of a module, <ins>along with their maximum associated phase (~source~ or ~evaluation~)</ins>. The List is in source text occurrence order.
               </td>
             </tr>
             <tr>
@@ -602,7 +642,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
 
             <emu-alg>
               1. Assert: _state_.[[IsLoading]] is *true*.
-              1. If _module_ is a Cyclic Module Record, _module_.[[Status]] is ~new~, and _state_.[[Visited]] does not contain _module_, <ins>and _phase_ is ~evaluation~, </ins>then
+              1. If _module_ is a Cyclic Module Record, _module_.[[Status]] is ~new~, <del>and</del> _state_.[[Visited]] does not contain _module_<ins>, and _phase_ is ~evaluation~, </ins>then
                 1. Append _module_ to _state_.[[Visited]].
                 1. Let _requestedModulesCount_ be the number of elements in _module_.[[RequestedModules]].
                 1. Set _state_.[[PendingModulesCount]] to _state_.[[PendingModulesCount]] + _requestedModulesCount_.
@@ -610,10 +650,9 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
                 1. <ins>For each ModuleRequest Record _required_ of _module_.[[RequestedModules]], do</ins>
                   1. If _module_.[[LoadedModules]] contains a Record whose [[Specifier]] is _required_<ins>.[[Specifier]]</ins>, then
                     1. Let _record_ be that Record.
-                    1. <ins>If _required_.[[Phase]] is not ~source~, then</ins>
-                      1. Perform InnerModuleLoading(_state_, _record_.[[Module]]<ins>, ~evaluation~</ins>).
+                    1. Perform InnerModuleLoading(_state_, _record_.[[Module]], <ins>_required_.[[Phase]]</ins>).
                   1. Else,
-                    1. Perform HostLoadImportedModule(_module_, _required_, _state_.[[HostDefined]], _state_).
+                    1. Perform HostLoadImportedModule(_module_, _required_<ins>.[[Specifier]]</ins>, _state_.[[HostDefined]], _state_).
                     1. NOTE: HostLoadImportedModule will call FinishLoadingImportedModule, which re-enters the graph loading process through ContinueModuleLoading.
                   1. If _state_.[[IsLoading]] is *false*, return ~unused~.
               1. Assert: _state_.[[PendingModulesCount]] ≥ 1.
@@ -631,8 +670,9 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
             <h1>
               ContinueModuleLoading (
                 _state_: a GraphLoadingState Record,
+                <ins>_referrer_: a Cyclic Module Record,</ins>
+                <ins>_specifier_: a String,</ins>
                 _moduleCompletion_: either a normal completion containing a Module Record or a throw completion,
-                <ins>_phase_: ~source~ or ~evaluation~,</ins>
               ): ~unused~
             </h1>
             <dl class="header">
@@ -643,7 +683,8 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
             <emu-alg>
               1. If _state_.[[IsLoading]] is *false*, return ~unused~.
               1. If _moduleCompletion_ is a normal completion, then
-                1. Perform InnerModuleLoading(_state_, _moduleCompletion_.[[Value]]<ins>, _phase_</ins>).
+                1. <ins>Let _moduleRequest_ be the ModuleRequest Record in _referrer_.[[RequestedModules]] whose [[Specifier]] is _specifier_.</ins>
+                1. Perform InnerModuleLoading(_state_, _moduleCompletion_.[[Value]]<ins>, _moduleRequest_.[[Phase]]</ins>).
               1. Else,
                 1. Set _state_.[[IsLoading]] to *false*.
                 1. Perform ! Call(_state_.[[PromiseCapability]].[[Reject]], *undefined*, « _moduleCompletion_.[[Value]] »).
@@ -687,7 +728,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
               1. Set _module_.[[DFSAncestorIndex]] to _index_.
               1. Set _index_ to _index_ + 1.
               1. Append _module_ to _stack_.
-              1. For each <del>String</del><ins>ModuleRequest</ins> _required_ of _module_.[[RequestedModules]], do
+              1. For each <del>String</del><ins>ModuleRequest Record</ins> _required_ of _module_.[[RequestedModules]], do
                 1. <ins>If _required_.[[Phase]] is ~evaluation~, then</ins>
                   1. Let _requiredModule_ be GetImportedModule(_module_, _required_<ins>.[[Specifier]]</ins>).
                   1. Set _index_ to ? InnerModuleLinking(_requiredModule_, _stack_, _index_).
@@ -842,7 +883,6 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
                 1. Perform ! _env_.InitializeBinding(_in_.[[LocalName]], _namespace_).
               1. <ins>Else if _in_.[[ImportName]] is ~source~, then</ins>
                 1. <ins>Let _moduleSourceObject_ be ? _importedModule_.GetModuleSource().</ins>
-                1. <ins>Assert: _moduleSourceObject_ is not *null*.</ins>
                 1. <ins>Perform ! _env_.CreateImmutableBinding(_in_.[[LocalName]], *true*).</ins>
                 1. <ins>Perform ! _env_.InitializeBinding(_in_.[[LocalName]], _moduleSourceObject_).</ins>
               1. Else,
@@ -890,14 +930,13 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
         </emu-clause>
       </emu-clause>
 
-      <emu-clause id="sec-HostLoadImportedModule" type="host-defined abstract operation" number="8">
+      <emu-clause id="sec-HostLoadImportedModule" type="host-defined abstract operation">
         <h1>
           HostLoadImportedModule (
             _referrer_: a Script Record, a Cyclic Module Record, or a Realm Record,
-            <del>_specifier_: a String,</del>
-            <ins>_moduleRequest_: a ModuleRequest Record,</ins>
+            _specifier_: a String,
             _hostDefined_: anything,
-            _payload_: a GraphLoadingState Record or a PromiseCapability Record,
+            _payload_: a GraphLoadingState Record or a <del>PromiseCapability Record</del><ins>DynamicImportState Record</ins>,
           ): ~unused~
         </h1>
         <dl class="header">
@@ -916,36 +955,25 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
         <p>An implementation of HostLoadImportedModule must conform to the following requirements:</p>
         <ul>
           <li>
-            The host environment must perform FinishLoadingImportedModule(_referrer_, <del>_specifier_</del><ins>_moduleRequest_</ins>, _payload_, _result_), where _result_ is either a normal completion containing the loaded Module Record or a throw completion, either synchronously or asynchronously.
+            The host environment must perform FinishLoadingImportedModule(_referrer_, _specifier_, _payload_, _result_), where _result_ is either a normal completion containing the loaded Module Record or a throw completion, either synchronously or asynchronously.
           </li>
           <li>
-            <p>If this operation is called multiple times with <del>the same</del><ins>two</ins> (_referrer_, <del>_specifier_</del><ins>_moduleRequest_</ins>) pair<ins>s</ins> such that:</p>
-            <ul>
-              <li><ins>the first _referrer_ is the same as the second _referrer_;</ins></li>
-              <li><ins>the first _moduleRequest_.[[Specifier]] is the same as the second _moduleRequest_.[[Specifier]];</ins></li>
-              <li>it performs FinishLoadingImportedModule(_referrer_, <del>_specifier_</del><ins>_moduleRequest_</ins>, _payload_, _result_) where _result_ is a normal completion,</li>
-            </ul>
-            <p>then it must perform FinishLoadingImportedModule(_referrer_, <del>_specifier_</del><ins>_moduleRequest_</ins>, _payload_, _result_) with the same _result_ each time.</p>
+            If this operation is called multiple times with the same (_referrer_, _specifier_) pair and it performs FinishLoadingImportedModule(_referrer_, _specifier_, _payload_, _result_) where _result_ is a normal completion, then it must perform FinishLoadingImportedModule(_referrer_, _specifier_, _payload_, _result_) with the same _result_ each time.
           </li>
           <li>
             The operation must treat _payload_ as an opaque value to be passed through to FinishLoadingImportedModule.
           </li>
-          <li>
-            <p><ins>When `[[Phase]]` is set to ~source~, this should not affect the identity or state of the resultant Module Record as if it had been called for the ~evaluation~ phase.</ins></p>
-            <p><ins>In addition, the ~source~ phase indicates that preloading should not take place in the host for this module.</ins></p>
-          </li>
         </ul>
 
-        <p>The actual process performed is host-defined, but typically consists of performing whatever I/O operations are necessary to load the appropriate Module Record. Multiple different <del>(_referrer_, _specifier_) pairs</del><ins>(_referrer_, _moduleRequest_.[[Specifer]]) pairs</ins> may map to the same Module Record instance. The actual mapping semantics is host-defined but typically a normalization process is applied to _specifier_ as part of the mapping process. A typical normalization process would include actions such as expansion of relative and abbreviated path specifiers.</p>
+        <p>The actual process performed is host-defined, but typically consists of performing whatever I/O operations are necessary to load the appropriate Module Record. Multiple different (_referrer_, _specifier_) pairs may map to the same Module Record instance. The actual mapping semantics is host-defined but typically a normalization process is applied to _specifier_ as part of the mapping process. A typical normalization process would include actions such as expansion of relative and abbreviated path specifiers.</p>
       </emu-clause>
 
-      <emu-clause id="sec-FinishLoadingImportedModule" type="abstract operation" number="9">
+      <emu-clause id="sec-FinishLoadingImportedModule" type="abstract operation">
         <h1>
           FinishLoadingImportedModule (
             _referrer_: a Script Record, a Cyclic Module Record, or a Realm Record,
-            <del>_specifier_: a String,</del>
-            <ins>_moduleRequest_: a ModuleRequest Record,</ins>
-            _payload_: a GraphLoadingState Record or a PromiseCapability Record,
+            _specifier_: a String,
+            _payload_: a GraphLoadingState Record or a <del>PromiseCapability Record</del><ins>DynamicImportState Record</ins>,
             _result_: either a normal completion containing a Module Record or a throw completion,
           ): ~unused~
         </h1>
@@ -955,13 +983,13 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
         </dl>
         <emu-alg>
           1. If _result_ is a normal completion, then
-            1. If _referrer_.[[LoadedModules]] contains a Record _record_ such that _record_.[[Specifier]] is <del>_specifier_</del><ins>_moduleRequest_.[[Specifier]]</ins>, then
+            1. If _referrer_.[[LoadedModules]] contains a Record _record_ such that _record_.[[Specifier]] is _specifier_, then
               1. Assert: _record_.[[Module]] is _result_.[[Value]].
-            1. Else, append the Record { [[Specifier]]: _moduleRequest_.[[Specifier]], [[Module]]: _result_.[[Value]] } to _referrer_.[[LoadedModules]].
+            1. Else, append the Record { [[Specifier]]: _specifier_, [[Module]]: _result_.[[Value]] } to _referrer_.[[LoadedModules]].
           1. If _payload_ is a GraphLoadingState Record, then
-            1. Perform ContinueModuleLoading(_payload_, <ins>_moduleRequest_.[[Phase]],</ins> _result_).
+            1. Perform ContinueModuleLoading(_payload_, <ins>_referrer_, _specifier_,</ins> _result_).
           1. Else,
-            1. Perform ContinueDynamicImport(_payload_, <ins>_moduleRequest_.[[Phase]],</ins> _result_).
+            1. Perform ContinueDynamicImport(_payload_, _result_).
         </emu-alg>
       </emu-clause>
     </emu-clause>
@@ -1036,7 +1064,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
       </emu-alg>
       <emu-grammar>ImportDeclaration : `import` ImportClause FromClause `;`</emu-grammar>
       <emu-alg>
-        1. Let _module_ be <del>the sole element of ModuleRequests</del><ins>SV</ins> of |FromClause|.
+        1. Let _module_ be the sole element of ModuleRequests of |FromClause|.
         1. Return ImportEntriesForModule of |ImportClause| with argument _module_.
       </emu-alg>
       <emu-grammar>ImportDeclaration : `import` ModuleSpecifier `;`</emu-grammar>
@@ -1053,7 +1081,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
   </emu-clause>
 </emu-clause>
 
-<emu-clause id="sec-reflection" number=28>
+<emu-clause id="sec-reflection" number="28">
   <h1>Reflection</h1>
   <emu-clause id="sec-module-source-objects">
     <h1><ins>Module Source Objects</ins></h1>
