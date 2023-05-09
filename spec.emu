@@ -4,8 +4,8 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/8.4/styles/github.min.css">
 <script src="./spec.js"></script>
 <pre class="metadata">
-title: Module Source Imports
-stage: 1
+title: Source Phase Imports
+stage: 2
 contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
 </pre>
 
@@ -52,7 +52,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
           1. Let _promiseCapability_ be ! NewPromiseCapability(%Promise%).
           1. Let _specifierString_ be Completion(ToString(_specifier_)).
           1. IfAbruptRejectPromise(_specifierString_, _promiseCapability_).
-          1. Let _sourcePhase_ be *false*.
+          1. Let _phase_ be ~evaluation~.
           1. If _options_ is not *undefined*, then
             1. If Type(_options_) is not Object,
               1. Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, &laquo; a newly created *TypeError* object &raquo;).
@@ -63,58 +63,19 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
               1. If Type(_phaseOption_) is not *"source"*, then
                 1. Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, &laquo; a newly created *TypeError* object &raquo;).
                 1. Return _promiseCapability_.[[Promise]].
-              1. Set _sourcePhase_ to *true*.
-          1. Let _state_ be the DynamicImportState Record { [[PromiseCapability]]: _promiseCapability_, [[SourcePhase]]: _sourcePhase_ }.
-          1. Perform HostLoadImportedModule(_referrer_, _specifierString_, ~empty~, _state_).
+              1. Set _phase_ to ~source~.
+          1. Let _moduleRequest_ be a new ModuleRequest Record { [[Specifier]]: _specifierString_, [[Phase]]: _phase_ }.
+          1. Perform HostLoadImportedModule(_referrer_, _moduleRequest_, ~empty~, _promiseCapability_).
           1. Return _promiseCapability_.[[Promise]].
         </emu-alg>
       </emu-clause>
 
-      <p><ins>A <dfn id="dynamicimportstate-record" variants="DynamicImportState Records">DynamicImportState Record</dfn> is a Record that contains information about the loading process of a module graph. It's used to continue loading after a call to HostLoadImportedModule. Each DynamicImportState Record has the fields defined in <emu-xref href="#table-dynamicimportstate-record-fields"></emu-xref>:</ins></p>
-      <emu-table id="table-dynamicimportstate-record-fields" caption="DynamicImportState Record Fields">
-        <table>
-          <tr>
-            <th>
-              Field Name
-            </th>
-            <th>
-              Value Type
-            </th>
-            <th>
-              Meaning
-            </th>
-          </tr>
-          <tr>
-            <td>
-              <ins>[[PromiseCapability]]</ins>
-            </td>
-            <td>
-              <ins>a PromiseCapability Record</ins>
-            </td>
-            <td>
-              <ins>The promise to resolve when the dynamic import finishes.</ins>
-            </td>
-          </tr>
-          <tr>
-            <td>
-              <ins>[[SourcePhase]]</ins>
-            </td>
-            <td>
-              <ins>a Boolean</ins>
-            </td>
-            <td>
-              <ins>It is true if the <code>phase: "source"</code> option was specified.</ins>
-            </td>
-          </tr>
-        </table>
-      </emu-table>
-
       <emu-clause id="sec-ContinueDynamicImport" type="abstract operation">
         <h1>
           ContinueDynamicImport (
-            <del>_promiseCapability_: a PromiseCapability Record,</del>
-            <ins>_state_: a DynamicImportState Record,</ins>
+            _promiseCapability_: a PromiseCapability Record,
             _moduleCompletion_: either a normal completion containing a Module Record or a throw completion,
+            <ins>_phase_: ~source~ or ~evaluation.</ins>
           ): ~unused~
         </h1>
         <dl class="header">
@@ -122,17 +83,16 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
           <dd>It completes the process of a dynamic import originally started by an <emu-xref href="#sec-import-calls">`import()`</emu-xref> call, resolving or rejecting the promise returned by that call as appropriate.</dd>
         </dl>
         <emu-alg>
-          1. <ins>Let _promiseCapability_ be _state_.[[PromiseCapability]].</ins>
           1. If _moduleCompletion_ is an abrupt completion, then
             1. Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, &laquo; _moduleCompletion_.[[Value]] &raquo;).
             1. Return ~unused~.
           1. Let _module_ be _moduleCompletion_.[[Value]].
-          1. <ins>If _state_.[[SourcePhase]] is *true*, then</ins>
-            1. <ins>Let _moduleSourceObject_ be _module_.[[ModuleSourceObject]].</ins>
-            1. <ins>If _moduleSourceObject_ is *null*, then</ins>
-              1. <ins>Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, &laquo; a newly created *TypeError* object &raquo;).</ins>
-              1. <ins>Return ~unused~.</ins>
-            1. <ins>Perform ! Call(_promiseCapability_.[[Resolve]], *undefined*, &laquo; _moduleSourceObject_ &raquo;).</ins>
+          1. <ins>If _phase_ is ~source~, then</ins>
+            1. <ins>Let _moduleSourceObject_ be _module_.GetModuleSource().</ins>
+            1. <ins>If _moduleSourceObject_ is an abrupt completion, then</ins>
+              1. <ins>Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, &laquo; _moduleSourceObject_.[[Value]] &raquo;).</ins>
+            1. <ins>Else,</ins>
+              1. <ins>Perform ! Call(_promiseCapability_.[[Resolve]], *undefined*, &laquo; _moduleSourceObject_.[[Value]] &raquo;).</ins>
             1. <ins>Return ~unused~.</ins>
           1. Let _loadPromise_ be _module_.LoadRequestedModules().
           1. Let _rejectedClosure_ be a new Abstract Closure with parameters (_reason_) that captures _promiseCapability_ and performs the following steps when called:
@@ -169,11 +129,56 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
     <emu-clause id="sec-module-semantics">
       <h1>Module Semantics</h1>
 
-      <emu-clause id="sec-static-semantics-modulerequests" type="sdo">
+      <emu-clause id="sec-modulerequest-record">
+        <h1><ins>ModuleRequest Records</ins></h1>
+
+        <p>A <dfn id="modulerequest-record" variants="ModuleRequest Records">ModuleRequest Record</dfn> represents the request to import a module up to a given phase. It consists of the following fields:</p>
+        <emu-table id="table-modulerequest-record-fields" caption="ModuleRequest Record fields">
+          <table>
+            <tbody>
+              <tr>
+                <th>
+                  Field Name
+                </th>
+                <th>
+                  Value Type
+                </th>
+                <th>
+                  Meaning
+                </th>
+              </tr>
+              <tr>
+                <td>
+                  [[Specifier]]
+                </td>
+                <td>
+                  String
+                </td>
+                <td>
+                  The module specifier
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  [[Phase]]
+                </td>
+                <td>
+                  ~source~ or ~evaluation~
+                </td>
+                <td>
+                  The target import phase
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </emu-table>
+
+        <emu-note type="editor">In general, this proposal replaces places where module specifiers are passed around with ModuleRequest Records. For example, several syntax-directed operations, such as ModuleRequests produce Lists of ModuleRequest Records rather than Lists of Strings which are interpreted as module specifiers. Some algorithms like ImportEntries and ImportEntriesForModule pass around ModuleRequest Records rather than Strings, in a way which doesn't require any particular textual change. Additionally, record fields in Cyclic Module Records and Source Text Module Records which contained Lists of Strings are replaced by Lists of ModuleRequest Records, as indicated above.</emu-note>
+      </emu-clause>
+
+      <emu-clause id="sec-static-semantics-modulerequests" type="sdo" number="3">
         <h1>
-          Static Semantics: ModuleRequests (
-            <ins>optional _recursiveOnly_: a Boolean</ins>
-          ): a List of Strings
+          Static Semantics: ModuleRequests ( ): a List of <del>Strings</del><ins>ModuleRequest Records</ins>
         </h1>
         <dl class="header">
         </dl>
@@ -187,33 +192,48 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
         </emu-alg>
         <emu-grammar>ModuleItemList : ModuleItemList ModuleItem</emu-grammar>
         <emu-alg>
-          1. Let _moduleNames_ be ModuleRequests of |ModuleItemList|.
-          1. Let _additionalNames_ be ModuleRequests of |ModuleItem|.
-          1. Append to _moduleNames_ each element of _additionalNames_ that is not already an element of _moduleNames_.
-          1. Return _moduleNames_.
+          1. Let <del>_moduleNames_</del><ins>_requests_</ins> be ModuleRequests of |ModuleItemList|.
+          1. Let <del>_additionalNames_</del><ins>_additionalRequests_</ins> be ModuleRequests of |ModuleItem|.
+          1. <del>For each String _name_ of _additionalNames_, do</del>
+          1. <ins>For each ModuleRequest Record _mr_ of _additionalRequests_, do</ins>
+            1. <ins>Let _found_ be *false*.</ins>
+            1. <ins>For each ModuleRequest Record _mr2_ of _requests_, do</ins>
+              1. <ins>If _mr_.[[Specifer]] is _mr2_.[[Specifer]] and _mr_.[[Phase]] is _mr2_.[[Phase]], then</ins>
+                1. <ins>Assert: _found_ is *false*.</ins>
+                1. <ins>Set _found_ to *true*.</ins>
+            1. <del>If _moduleNames_ does not contain _name_, then</del>
+            1. <ins>If _found_ is *false*, then</ins>
+              1. Append <del>_name_</del><ins>_mr_</ins> to <del>_moduleNames_</del><ins>_requests_</ins>.
+          1. Return <del>_moduleNames_</del><ins>_requests_</ins>.
         </emu-alg>
         <emu-grammar>ModuleItem : StatementListItem</emu-grammar>
         <emu-alg>
           1. Return a new empty List.
         </emu-alg>
-        <emu-grammar>ImportDeclaration : `import` ImportClause FromClause `;`</emu-grammar>
+        <emu-grammar>
+          ImportDeclaration : `import` ImportClause FromClause `;`
+        </emu-grammar>
         <emu-alg>
-          1. Return ModuleRequests of |FromClause|.
+          1. <del>Return ModuleRequests of |FromClause|.</del>
+          1. <ins>Let _specifier_ be SV of |FromClause|.</ins>
+          1. <ins>Return a List whose sole element is the ModuleRequest Record { [[Specifer]]: _specifier_, [[Phase]]: ~evaluation~ }.</ins>
         </emu-alg>
-        <emu-grammar><ins>ImportDeclaration : `import` `module` ImportedBinding FromClause `;`</ins></emu-grammar>
+        <emu-grammar><ins>ImportDeclaration : `import` `source` ImportedBinding FromClause `;`</ins></emu-grammar>
         <emu-alg>
-          1. <ins>If _recursiveOnly_ is *true*, return a new empty List.</ins>
-          1. <ins>Return ModuleRequests of |FromClause|.</ins>
+          1. <ins>Let _specifier_ be SV of |FromClause|.</ins>
+          1. <ins>Return a List whose sole element is the ModuleRequest Record { [[Specifer]]: _specifier_, [[Phase]]: ~source~ }.</ins>
         </emu-alg>
-        <emu-grammar>ModuleSpecifier : StringLiteral</emu-grammar>
+        <emu-grammar><del>ModuleSpecifier : StringLiteral</del></emu-grammar>
         <emu-alg>
-          1. Return a List whose sole element is the SV of |StringLiteral|.
+          1. <del>Return a List whose sole element is the SV of |StringLiteral|.</del>
         </emu-alg>
         <emu-grammar>
           ExportDeclaration : `export` ExportFromClause FromClause `;`
         </emu-grammar>
         <emu-alg>
-          1. Return the ModuleRequests of |FromClause|.
+          1. <del>Return ModuleRequests of |FromClause|.</del>
+          1. <ins>Let _specifier_ be SV of |FromClause|.</ins>
+          1. <ins>Return a List whose sole element is the ModuleRequest Record { [[Specifer]]: _specifier_, [[Phase]]: ~evaluation~ }.</ins>
         </emu-alg>
         <emu-grammar>
           ExportDeclaration :
@@ -227,6 +247,51 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
         <emu-alg>
           1. Return a new empty List.
         </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-modulesource-record">
+        <h1><ins>ModuleSource Records</ins></h1>
+
+        <p>A <dfn id="modulesource-record" variants="ModuleSource Records">ModuleSource Record</dfn> represents the request to import a module as an unlinked source. It consists of the following fields:</p>
+        <emu-table id="table-modulesource-record-fields" caption="ModuleSource Record fields">
+          <table>
+            <tbody>
+              <tr>
+                <th>
+                  Field Name
+                </th>
+                <th>
+                  Value Type
+                </th>
+                <th>
+                  Meaning
+                </th>
+              </tr>
+              <tr>
+                <td>
+                  [[SourceClassName]]
+                </td>
+                <td>
+                  String
+                </td>
+                <td>
+                  The unique source class name string used to represent this module source. Source Text Module Records are usually represented by the *"ModuleSource"* class.
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  [[HostDefined]]
+                </td>
+                <td>
+                  anything (default value is *undefined*)
+                </td>
+                <td>
+                  Field reserved for use by host environments to associate additional information with module sources.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </emu-table>
       </emu-clause>
 
       <emu-clause id="sec-abstract-module-records">
@@ -284,25 +349,6 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
             </tr>
             <tr>
               <td>
-                <ins>[[ModuleSourceObject]]</ins>
-              </td>
-              <td>
-                <ins>an Object or *null* (defaults to *null*)</ins>
-              </td>
-              <td>
-                <ins>An Object corresponding to the source Module Record.</ins>
-
-                <emu-note type="editor">
-                  <p>This concept is better explained by <a href="https://tc39.es/proposal-compartments/0-module-and-module-source.html">Layer 0</a> and <a href="https://github.com/tc39/proposal-compartments/blob/master/2-virtual-module-source.md">Layer 2</a> of the Compartments proposal.</p>
-
-                  <p>The *null* default will throw an error for unsupported phaseions (including for SourceTextModuleRecord).</p>
-
-                  <p>For <a href="https://webassembly.github.io/esm-integration/js-api/index.html#esm-integration">WebAssembly modules</a>, this field should contain the corresponding `WebAssembly.Module` object.</p>
-                </emu-note>
-              </td>
-            </tr>
-            <tr>
-              <td>
                 [[HostDefined]]
               </td>
               <td>
@@ -310,6 +356,76 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
               </td>
               <td>
                 Field reserved for use by host environments that need to associate additional information with a module.
+              </td>
+            </tr>
+          </table>
+        </emu-table>
+        <emu-table id="table-abstract-methods-of-module-records" caption="Abstract Methods of Module Records" oldids="table-37">
+          <table>
+            <tr>
+              <th>
+                Method
+              </th>
+              <th>
+                Purpose
+              </th>
+            </tr>
+            <tr>
+              <td>
+                LoadRequestedModules( [ _hostDefined_ ] )
+              </td>
+              <td>
+                <p>Prepares the module for linking by recursively loading all its dependencies, and returns a promise.</p>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                GetExportedNames([_exportStarSet_])
+              </td>
+              <td>
+                <p>Return a list of all names that are either directly or indirectly exported from this module.</p>
+                <p>LoadRequestedModules must have completed successfully prior to invoking this method.</p>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                ResolveExport(_exportName_ [, _resolveSet_])
+              </td>
+              <td>
+                <p>Return the binding of a name exported by this module. Bindings are represented by a <dfn id="resolvedbinding-record" variants="ResolvedBinding Records">ResolvedBinding Record</dfn>, of the form { [[Module]]: Module Record, [[BindingName]]: String | ~namespace~ }. If the export is a Module Namespace Object without a direct binding in any module, [[BindingName]] will be set to ~namespace~. Return *null* if the name cannot be resolved, or ~ambiguous~ if multiple bindings were found.</p>
+                <p>Each time this operation is called with a specific _exportName_, _resolveSet_ pair as arguments it must return the same result.</p>
+                <p>LoadRequestedModules must have completed successfully prior to invoking this method.</p>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                Link()
+              </td>
+              <td>
+                <p>Prepare the module for evaluation by transitively resolving all module dependencies and creating a Module Environment Record.</p>
+                <p>LoadRequestedModules must have completed successfully prior to invoking this method.</p>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                Evaluate()
+              </td>
+              <td>
+                <p>Returns a promise for the evaluation of this module and its dependencies, resolving on successful evaluation or if it has already been evaluated successfully, and rejecting for an evaluation error or if it has already been evaluated unsuccessfully. If the promise is rejected, hosts are expected to handle the promise rejection and rethrow the evaluation error.</p>
+                <p>Link must have completed successfully prior to invoking this method.</p>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <ins>GetModuleSource(): either a normal completion containing an Object or a throw completion</ins>
+              </td>
+              <td>
+                <p><ins>Returns a completion for the ModuleSource Object corresponding to this source Module Record's source phase (<emu-xref href="#sec-module-source-objects"></emu-xref>), if it has been requested.</ins></p>
+
+                <emu-note type="editor">
+                  <ins>When called on the same Module Record, the Object for the normal completion of GetModuleSource must be an idempotent unique return value.</ins>
+                  <ins>For a normal completion, the Object is expected to be a subclass of %AbstractModuleSource%, with an internal slot `[[ModuleSourceRecord]]`.</ins>
+                </emu-note>
               </td>
             </tr>
           </table>
@@ -383,27 +499,10 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
                 [[RequestedModules]]
               </td>
               <td>
-                a List of Strings
+                a List of <del>Strings</del><ins>ModuleRequest Records</ins>
               </td>
               <td>
-                A List of all the |ModuleSpecifier| strings used by the module represented by this record to request the importation of a module. The List is source text occurrence ordered.
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <ins>[[RequestedSourcePhasesOnly]]</ins>
-              </td>
-              <td>
-                <ins>a List of Strings</ins>
-              </td>
-              <td>
-                <ins>a List of all the |ModuleSpecifier| strings that have been imported exclusively using <code>import module</code> declarations, and thus that shouldn't be recursively loaded.</ins>
-
-                <emu-note>
-                  <p>For example, given this code:</p>
-                  <pre><code class="javascript">import "A";</code><code class="javascript">import module A from "A";</code><code class="javascript">import module B from "B";</code></pre>
-                  <p>[[RequestedSourcePhasesOnly]] is « `"C"` ».</p>
-                </emu-note>
+                A List of all the |ModuleSpecifier| strings used by the module represented by this record to request the importation of a module, <ins>along with their associated phase (~source~ or ~evaluation~)</ins>. The List is in source text occurrence order.
               </td>
             </tr>
             <tr>
@@ -484,6 +583,8 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
           <dl class="header">
             <dt>for</dt>
             <dd>a Cyclic Module Record _module_</dd>
+            <dt>description</dt>
+            <dd>It populates the [[LoadedModules]] of all the Module Records in the dependency graph of _module_ (most of the work is done by the auxiliary function InnerModuleLoading). It takes an optional _hostDefined_ parameter that is passed to the HostLoadImportedModule hook.</dd>
           </dl>
 
           <emu-clause id="sec-InnerModuleLoading" type="abstract operation">
@@ -491,8 +592,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
               InnerModuleLoading (
                 _state_: a GraphLoadingState Record,
                 _module_: a Module Record,
-                <ins>optional _referrer_: a Cyclic Module Record,</ins>
-                <ins>optional _specifier_: a String,</ins>
+                <ins>_phase_: ~source~ or ~evaluation~,</ins>
               ): ~unused~
             </h1>
             <dl class="header">
@@ -502,28 +602,27 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
 
             <emu-alg>
               1. Assert: _state_.[[IsLoading]] is *true*.
-              1. <ins>Let _importOnlyAsPhase_ be *false*.</ins>
-              1. <ins>If _referrer_ has been specified, then</ins>
-                1. <ins>Assert: _specifier_ has been specified.</ins>
-                1. <ins>If _referrer_.[[RequestedSourcePhasesOnly]] contains _specifier_, set _importOnlyAsPhase_ to *true*.</ins>
-              1. If <ins>_importOnlyAsPhase_ is *false*,</ins> _module_ is a Cyclic Module Record, _module_.[[Status]] is ~new~, and _state_.[[Visited]] does not contain _module_, then
+              1. If _module_ is a Cyclic Module Record, _module_.[[Status]] is ~new~, and _state_.[[Visited]] does not contain _module_, <ins>and _phase_ is ~evaluation~, </ins>then
                 1. Append _module_ to _state_.[[Visited]].
-                1. Let _requestedModulesCount_ be the length of _module_.[[RequestedModules]].
+                1. Let _requestedModulesCount_ be the number of elements in _module_.[[RequestedModules]].
                 1. Set _state_.[[PendingModulesCount]] to _state_.[[PendingModulesCount]] + _requestedModulesCount_.
-                1. For each String _required_ of _module_.[[RequestedModules]], do
-                  1. If _module_.[[LoadedModules]] contains a Record _record_ whose [[Specifier]] is _required_, then
-                    1. Perform InnerModuleLoading(_state_, _record_.[[Module]], <ins>_module_, _required_</ins>).
+                1. <del>For each String _required_ of _module_.[[RequestedModules]], do</del>
+                1. <ins>For each ModuleRequest Record _required_ of _module_.[[RequestedModules]], do</ins>
+                  1. If _module_.[[LoadedModules]] contains a Record whose [[Specifier]] is _required_<ins>.[[Specifier]]</ins>, then
+                    1. Let _record_ be that Record.
+                    1. <ins>If _required_.[[Phase]] is not ~source~, then</ins>
+                      1. Perform InnerModuleLoading(_state_, _record_.[[Module]]<ins>, ~evaluation~</ins>).
                   1. Else,
                     1. Perform HostLoadImportedModule(_module_, _required_, _state_.[[HostDefined]], _state_).
                     1. NOTE: HostLoadImportedModule will call FinishLoadingImportedModule, which re-enters the graph loading process through ContinueModuleLoading.
                   1. If _state_.[[IsLoading]] is *false*, return ~unused~.
-              1. Assert: _state_.[[PendingModulesCount]] &ge; 1.
+              1. Assert: _state_.[[PendingModulesCount]] ≥ 1.
               1. Set _state_.[[PendingModulesCount]] to _state_.[[PendingModulesCount]] - 1.
               1. If _state_.[[PendingModulesCount]] = 0, then
                 1. Set _state_.[[IsLoading]] to *false*.
-                1. For each Cyclic Module Record _loaded_ in _state_.[[Visited]], do
+                1. For each Cyclic Module Record _loaded_ of _state_.[[Visited]], do
                   1. If _loaded_.[[Status]] is ~new~, set _loaded_.[[Status]] to ~unlinked~.
-                1. Perform ! Call(_state_.[[PromiseCapability]].[[Resolve]], *undefined*, &laquo; *undefined* &raquo;).
+                1. Perform ! Call(_state_.[[PromiseCapability]].[[Resolve]], *undefined*, « *undefined* »).
               1. Return ~unused~.
             </emu-alg>
           </emu-clause>
@@ -532,9 +631,8 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
             <h1>
               ContinueModuleLoading (
                 _state_: a GraphLoadingState Record,
-                <ins>_referrer_: a Cyclic Module Record,</ins>
-                <ins>_specifier_: a String,</ins>
                 _moduleCompletion_: either a normal completion containing a Module Record or a throw completion,
+                <ins>_phase_: ~source~ or ~evaluation~,</ins>
               ): ~unused~
             </h1>
             <dl class="header">
@@ -545,119 +643,179 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
             <emu-alg>
               1. If _state_.[[IsLoading]] is *false*, return ~unused~.
               1. If _moduleCompletion_ is a normal completion, then
-                1. Perform InnerModuleLoading(_state_, _moduleCompletion_.[[Value]], <ins>_referrer_, _specifier_</ins>).
+                1. Perform InnerModuleLoading(_state_, _moduleCompletion_.[[Value]]<ins>, _phase_</ins>).
               1. Else,
                 1. Set _state_.[[IsLoading]] to *false*.
-                1. Perform ! Call(_state_.[[PromiseCapability]].[[Reject]], *undefined*, &laquo; _moduleCompletion_.[[Value]] &raquo;).
+                1. Perform ! Call(_state_.[[PromiseCapability]].[[Reject]], *undefined*, « _moduleCompletion_.[[Value]] »).
               1. Return ~unused~.
             </emu-alg>
           </emu-clause>
+        </emu-clause>
+
+        <emu-clause id="sec-moduledeclarationlinking" type="concrete method" oldids="sec-moduledeclarationinstantiation">
+          <h1>Link ( ): either a normal completion containing ~unused~ or a throw completion</h1>
+          <dl class="header">
+            <dt>for</dt>
+            <dd>a Cyclic Module Record _module_</dd>
+
+            <dt>description</dt>
+            <dd>On success, Link transitions this module's [[Status]] from ~unlinked~ to ~linked~. On failure, an exception is thrown and this module's [[Status]] remains ~unlinked~. (Most of the work is done by the auxiliary function InnerModuleLinking.)</dd>
+          </dl>
+
+          <emu-clause id="sec-InnerModuleLinking" type="abstract operation" oldids="sec-innermoduleinstantiation">
+            <h1>
+              InnerModuleLinking (
+                _module_: a Module Record,
+                _stack_: a List of Cyclic Module Records,
+                _index_: a non-negative integer,
+              ): either a normal completion containing a non-negative integer or a throw completion
+            </h1>
+            <dl class="header">
+              <dt>description</dt>
+              <dd>It is used by Link to perform the actual linking process for _module_, as well as recursively on all other modules in the dependency graph. The _stack_ and _index_ parameters, as well as a module's [[DFSIndex]] and [[DFSAncestorIndex]] fields, keep track of the depth-first search (DFS) traversal. In particular, [[DFSAncestorIndex]] is used to discover strongly connected components (SCCs), such that all modules in an SCC transition to ~linked~ together.</dd>
+            </dl>
+
+            <emu-alg>
+              1. If _module_ is not a Cyclic Module Record, then
+                1. Perform ? _module_.Link().
+                1. Return _index_.
+              1. If _module_.[[Status]] is one of ~linking~, ~linked~, ~evaluating-async~, or ~evaluated~, then
+                1. Return _index_.
+              1. Assert: _module_.[[Status]] is ~unlinked~.
+              1. Set _module_.[[Status]] to ~linking~.
+              1. Set _module_.[[DFSIndex]] to _index_.
+              1. Set _module_.[[DFSAncestorIndex]] to _index_.
+              1. Set _index_ to _index_ + 1.
+              1. Append _module_ to _stack_.
+              1. For each <del>String</del><ins>ModuleRequest</ins> _required_ of _module_.[[RequestedModules]], do
+                1. <ins>If _required_.[[Phase]] is ~evaluation~, then</ins>
+                  1. Let _requiredModule_ be GetImportedModule(_module_, _required_<ins>.[[Specifier]]</ins>).
+                  1. Set _index_ to ? InnerModuleLinking(_requiredModule_, _stack_, _index_).
+                  1. If _requiredModule_ is a Cyclic Module Record, then
+                    1. Assert: _requiredModule_.[[Status]] is one of ~linking~, ~linked~, ~evaluating-async~, or ~evaluated~.
+                    1. Assert: _requiredModule_.[[Status]] is ~linking~ if and only if _stack_ contains _requiredModule_.
+                    1. If _requiredModule_.[[Status]] is ~linking~, then
+                      1. Set _module_.[[DFSAncestorIndex]] to min(_module_.[[DFSAncestorIndex]], _requiredModule_.[[DFSAncestorIndex]]).
+              1. Perform ? _module_.InitializeEnvironment().
+              1. Assert: _module_ occurs exactly once in _stack_.
+              1. Assert: _module_.[[DFSAncestorIndex]] ≤ _module_.[[DFSIndex]].
+              1. If _module_.[[DFSAncestorIndex]] = _module_.[[DFSIndex]], then
+                1. Let _done_ be *false*.
+                1. Repeat, while _done_ is *false*,
+                  1. Let _requiredModule_ be the last element of _stack_.
+                  1. Remove the last element of _stack_.
+                  1. Assert: _requiredModule_ is a Cyclic Module Record.
+                  1. Set _requiredModule_.[[Status]] to ~linked~.
+                  1. If _requiredModule_ and _module_ are the same Module Record, set _done_ to *true*.
+              1. Return _index_.
+            </emu-alg>
+          </emu-clause>
+        </emu-clause>
+        <emu-clause id="sec-moduleevaluation" type="concrete method">
+          <h1>Evaluate ( ): a Promise</h1>
+          <dl class="header">
+            <dt>for</dt>
+            <dd>a Cyclic Module Record _module_</dd>
+
+            <dt>description</dt>
+            <dd>Evaluate transitions this module's [[Status]] from ~linked~ to either ~evaluating-async~ or ~evaluated~. The first time it is called on a module in a given strongly connected component, Evaluate creates and returns a Promise which resolves when the module has finished evaluating. This Promise is stored in the [[TopLevelCapability]] field of the [[CycleRoot]] for the component. Future invocations of Evaluate on any module in the component return the same Promise. (Most of the work is done by the auxiliary function InnerModuleEvaluation.)</dd>
+          </dl>
+
+          <emu-clause id="sec-innermoduleevaluation" type="abstract operation">
+            <h1>
+              InnerModuleEvaluation (
+                _module_: a Module Record,
+                _stack_: a List of Cyclic Module Records,
+                _index_: a non-negative integer,
+              ): either a normal completion containing a non-negative integer or a throw completion
+            </h1>
+            <dl class="header">
+              <dt>description</dt>
+              <dd>It is used by Evaluate to perform the actual evaluation process for _module_, as well as recursively on all other modules in the dependency graph. The _stack_ and _index_ parameters, as well as _module_'s [[DFSIndex]] and [[DFSAncestorIndex]] fields, are used the same way as in InnerModuleLinking.</dd>
+            </dl>
+
+            <emu-alg>
+              1. If _module_ is not a Cyclic Module Record, then
+                1. Let _promise_ be ! _module_.Evaluate().
+                1. Assert: _promise_.[[PromiseState]] is not ~pending~.
+                1. If _promise_.[[PromiseState]] is ~rejected~, then
+                  1. Return ThrowCompletion(_promise_.[[PromiseResult]]).
+                1. Return _index_.
+              1. If _module_.[[Status]] is either ~evaluating-async~ or ~evaluated~, then
+                1. If _module_.[[EvaluationError]] is ~empty~, return _index_.
+                1. Otherwise, return ? _module_.[[EvaluationError]].
+              1. If _module_.[[Status]] is ~evaluating~, return _index_.
+              1. Assert: _module_.[[Status]] is ~linked~.
+              1. Set _module_.[[Status]] to ~evaluating~.
+              1. Set _module_.[[DFSIndex]] to _index_.
+              1. Set _module_.[[DFSAncestorIndex]] to _index_.
+              1. Set _module_.[[PendingAsyncDependencies]] to 0.
+              1. Set _index_ to _index_ + 1.
+              1. Append _module_ to _stack_.
+              1. <del>For each String _required_ of _module_.[[RequestedModules]], do</del>
+              1. <ins>For each ModuleRequest Record _required_ of _module_.[[RequestedModules]], do</ins>
+                1. Let _requiredModule_ be GetImportedModule(_module_, _required_<ins>.[[Specifier]]</ins>).
+                1. <ins>If _requiredModule_.[[Phase]] is ~evaluation~, then</ins>
+                  1. Set _index_ to ? InnerModuleEvaluation(_requiredModule_, _stack_, _index_).
+                  1. If _requiredModule_ is a Cyclic Module Record, then
+                    1. Assert: _requiredModule_.[[Status]] is one of ~evaluating~, ~evaluating-async~, or ~evaluated~.
+                    1. Assert: _requiredModule_.[[Status]] is ~evaluating~ if and only if _stack_ contains _requiredModule_.
+                    1. If _requiredModule_.[[Status]] is ~evaluating~, then
+                      1. Set _module_.[[DFSAncestorIndex]] to min(_module_.[[DFSAncestorIndex]], _requiredModule_.[[DFSAncestorIndex]]).
+                    1. Else,
+                      1. Set _requiredModule_ to _requiredModule_.[[CycleRoot]].
+                      1. Assert: _requiredModule_.[[Status]] is either ~evaluating-async~ or ~evaluated~.
+                      1. If _requiredModule_.[[EvaluationError]] is not ~empty~, return ? _requiredModule_.[[EvaluationError]].
+                    1. If _requiredModule_.[[AsyncEvaluation]] is *true*, then
+                      1. Set _module_.[[PendingAsyncDependencies]] to _module_.[[PendingAsyncDependencies]] + 1.
+                      1. Append _module_ to _requiredModule_.[[AsyncParentModules]].
+              1. If _module_.[[PendingAsyncDependencies]] > 0 or _module_.[[HasTLA]] is *true*, then
+                1. Assert: _module_.[[AsyncEvaluation]] is *false* and was never previously set to *true*.
+                1. Set _module_.[[AsyncEvaluation]] to *true*.
+                1. NOTE: The order in which module records have their [[AsyncEvaluation]] fields transition to *true* is significant. (See <emu-xref href="#sec-async-module-execution-fulfilled"></emu-xref>.)
+                1. If _module_.[[PendingAsyncDependencies]] = 0, perform ExecuteAsyncModule(_module_).
+              1. Else,
+                1. Perform ? <emu-meta effects="user-code">_module_.ExecuteModule()</emu-meta>.
+              1. Assert: _module_ occurs exactly once in _stack_.
+              1. Assert: _module_.[[DFSAncestorIndex]] ≤ _module_.[[DFSIndex]].
+              1. If _module_.[[DFSAncestorIndex]] = _module_.[[DFSIndex]], then
+                1. Let _done_ be *false*.
+                1. Repeat, while _done_ is *false*,
+                  1. Let _requiredModule_ be the last element of _stack_.
+                  1. Remove the last element of _stack_.
+                  1. Assert: _requiredModule_ is a Cyclic Module Record.
+                  1. If _requiredModule_.[[AsyncEvaluation]] is *false*, set _requiredModule_.[[Status]] to ~evaluated~.
+                  1. Otherwise, set _requiredModule_.[[Status]] to ~evaluating-async~.
+                  1. If _requiredModule_ and _module_ are the same Module Record, set _done_ to *true*.
+                  1. Set _requiredModule_.[[CycleRoot]] to _module_.
+              1. Return _index_.
+            </emu-alg>
+          </emu-clause>
+        </emu-clause>
+        <emu-clause id="sec-getmodulesource" type="concrete method">
+          <h1>
+            <ins>
+              GetModuleSource ( ): either a normal completion containing an Object or a throw completion
+            </ins>
+          </h1>
+          <dl class="header">
+            <dt>for</dt>
+            <dd>a Cyclic Module Record _module_</dd>
+
+            <dt>description</dt>
+            <dd>
+              <p>Cyclic Module Record provides a default GetModuleSource implementation with an abrupt completion to provide a standard reference error that a source phase import is not available.</p>
+            </dd>
+          </dl>
+          <emu-alg>
+            1. Let _error_ be a newly created *ReferenceError* object.
+            1. Return ThrowCompletion(_error_).
+          </emu-alg>
         </emu-clause>
       </emu-clause>
 
       <emu-clause id="sec-source-text-module-records">
         <h1>Source Text Module Records</h1>
-
-        <p>An <dfn id="importentry-record" variants="ImportEntry Records">ImportEntry Record</dfn> is a Record that digests information about a single declarative import. Each ImportEntry Record has the fields defined in <emu-xref href="#table-importentry-record-fields"></emu-xref>:</p>
-        <emu-table id="table-importentry-record-fields" caption="ImportEntry Record Fields" oldids="table-39">
-          <table>
-            <tr>
-              <th>
-                Field Name
-              </th>
-              <th>
-                Value Type
-              </th>
-              <th>
-                Meaning
-              </th>
-            </tr>
-            <tr>
-              <td>
-                [[ModuleRequest]]
-              </td>
-              <td>
-                a String
-              </td>
-              <td>
-                String value of the |ModuleSpecifier| of the |ImportDeclaration|.
-              </td>
-            </tr>
-            <tr>
-              <td>
-                [[ImportName]]
-              </td>
-              <td>
-                a String or ~namespace-object~<ins> or ~module~</ins>
-              </td>
-              <td>
-                The name under which the desired binding is exported by the module identified by [[ModuleRequest]]. The value ~namespace-object~ indicates that the import request is for the target module's namespace object. <ins>The value ~module~ indicates that the import request is for a module import phaseion.</ins>
-              </td>
-            </tr>
-            <tr>
-              <td>
-                [[LocalName]]
-              </td>
-              <td>
-                a String
-              </td>
-              <td>
-                The name that is used to locally access the imported value from within the importing module.
-              </td>
-            </tr>
-          </table>
-        </emu-table>
-
-
-        <emu-clause id="sec-parsemodule" type="abstract operation">
-          <h1>
-            ParseModule (
-              _sourceText_: ECMAScript source text,
-              _realm_: a Realm Record,
-              _hostDefined_: anything,
-            ): a Source Text Module Record or a non-empty List of *SyntaxError* objects
-          </h1>
-          <dl class="header">
-            <dt>description</dt>
-            <dd>It creates a Source Text Module Record based upon the result of parsing _sourceText_ as a |Module|.</dd>
-          </dl>
-          <emu-alg>
-            1. Let _body_ be ParseText(_sourceText_, |Module|).
-            1. If _body_ is a List of errors, return _body_.
-            1. Let _requestedModules_ be the ModuleRequests of _body_.
-            1. <ins>Let _recursiveRequestedModules_ be the ModuleRequests of _body_ with argument *true*</ins>.
-            1. <ins>Let _requestedSourcePhasesOnly_ be a list containing the elements of _requestedModules_ that are not elements of _recursiveRequestedModules_
-            1. Let _importEntries_ be ImportEntries of _body_.
-            1. Let _importedBoundNames_ be ImportedLocalNames(_importEntries_).
-            1. Let _indirectExportEntries_ be a new empty List.
-            1. Let _localExportEntries_ be a new empty List.
-            1. Let _starExportEntries_ be a new empty List.
-            1. Let _exportEntries_ be ExportEntries of _body_.
-            1. For each ExportEntry Record _ee_ of _exportEntries_, do
-              1. If _ee_.[[ModuleRequest]] is *null*, then
-                1. If _ee_.[[LocalName]] is not an element of _importedBoundNames_, then
-                  1. Append _ee_ to _localExportEntries_.
-                1. Else,
-                  1. Let _ie_ be the element of _importEntries_ whose [[LocalName]] is the same as _ee_.[[LocalName]].
-                  1. If _ie_.[[ImportName]] is ~namespace-object~, then
-                    1. NOTE: This is a re-export of an imported module namespace object.
-                    1. Append _ee_ to _localExportEntries_.
-                  1. Else,
-                    1. NOTE: This is a re-export of a single name.
-                    1. Append the ExportEntry Record { [[ModuleRequest]]: _ie_.[[ModuleRequest]], [[ImportName]]: _ie_.[[ImportName]], [[LocalName]]: *null*, [[ExportName]]: _ee_.[[ExportName]] } to _indirectExportEntries_.
-              1. Else if _ee_.[[ImportName]] is ~all-but-default~, then
-                1. Assert: _ee_.[[ExportName]] is *null*.
-                1. Append _ee_ to _starExportEntries_.
-              1. Else,
-                1. Append _ee_ to _indirectExportEntries_.
-            1. Let _async_ be _body_ Contains `await`.
-            1. Return Source Text Module Record { [[Realm]]: _realm_, [[Environment]]: ~empty~, [[Namespace]]: ~empty~, [[CycleRoot]]: ~empty~, [[HasTLA]]: _async_, [[AsyncEvaluation]]: *false*, [[TopLevelCapability]]: ~empty~, [[AsyncParentModules]]: &laquo; &raquo;, [[PendingAsyncDependencies]]: ~empty~, [[Status]]: ~new~, [[EvaluationError]]: ~empty~, [[HostDefined]]: _hostDefined_, [[ECMAScriptCode]]: _body_, [[Context]]: ~empty~, [[ImportMeta]]: ~empty~, [[RequestedModules]]: _requestedModules_, <ins>[[RequestedSourcePhasesOnly]]: _requestedSourcePhasesOnly_,</ins> [[LoadedModules]]: a new empty List, [[ImportEntries]]: _importEntries_, [[LocalExportEntries]]: _localExportEntries_, [[IndirectExportEntries]]: _indirectExportEntries_, [[StarExportEntries]]: _starExportEntries_, [[DFSIndex]]: ~empty~, [[DFSAncestorIndex]]: ~empty~, <ins>[[ModuleSourceObject]]: *null*</ins> }.
-          </emu-alg>
-
-          <emu-note type="editor">
-            <a href="https://tc39.es/proposal-compartments/0-module-and-module-source.html">Layer 0 of the Compartments proposal</a> defines ModuleSource objects, which would be used here as the [[ModuleSourceObject]] of Source Text Module Records.
-          </emu-note>
-        </emu-clause>
 
         <emu-clause id="sec-source-text-module-record-initialize-environment" type="concrete method">
           <h1>InitializeEnvironment ( ): either a normal completion containing ~unused~ or a throw completion</h1>
@@ -669,7 +827,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
           <emu-alg>
             1. For each ExportEntry Record _e_ of _module_.[[IndirectExportEntries]], do
               1. Let _resolution_ be _module_.ResolveExport(_e_.[[ExportName]]).
-              1. If _resolution_ is *null* or ~ambiguous~, throw a *SyntaxError* exception.
+              1. If _resolution_ is either *null* or ~ambiguous~, throw a *SyntaxError* exception.
               1. Assert: _resolution_ is a ResolvedBinding Record.
             1. Assert: All named exports from _module_ are resolvable.
             1. Let _realm_ be _module_.[[Realm]].
@@ -682,14 +840,14 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
                 1. Let _namespace_ be GetModuleNamespace(_importedModule_).
                 1. Perform ! _env_.CreateImmutableBinding(_in_.[[LocalName]], *true*).
                 1. Perform ! _env_.InitializeBinding(_in_.[[LocalName]], _namespace_).
-              1. <ins>Else if _in_.[[ImportName]] is ~module~, then</ins>
-                1. <ins>Let _moduleSourceObject_ be _importedModule_.[[ModuleSourceObject]].</ins>
-                1. <ins>If _moduleSourceObject_ is *null*, throw a *TypeError* exception.</ins>
+              1. <ins>Else if _in_.[[ImportName]] is ~source~, then</ins>
+                1. <ins>Let _moduleSourceObject_ be ? _importedModule_.GetModuleSource().</ins>
+                1. <ins>Assert: _moduleSourceObject_ is not *null*.</ins>
                 1. <ins>Perform ! _env_.CreateImmutableBinding(_in_.[[LocalName]], *true*).</ins>
                 1. <ins>Perform ! _env_.InitializeBinding(_in_.[[LocalName]], _moduleSourceObject_).</ins>
               1. Else,
                 1. Let _resolution_ be _importedModule_.ResolveExport(_in_.[[ImportName]]).
-                1. If _resolution_ is *null* or ~ambiguous~, throw a *SyntaxError* exception.
+                1. If _resolution_ is either *null* or ~ambiguous~, throw a *SyntaxError* exception.
                 1. If _resolution_.[[BindingName]] is ~namespace~, then
                   1. Let _namespace_ be GetModuleNamespace(_resolution_.[[Module]]).
                   1. Perform ! _env_.CreateImmutableBinding(_in_.[[LocalName]], *true*).
@@ -711,7 +869,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
             1. Let _declaredVarNames_ be a new empty List.
             1. For each element _d_ of _varDeclarations_, do
               1. For each element _dn_ of the BoundNames of _d_, do
-                1. If _dn_ is not an element of _declaredVarNames_, then
+                1. If _declaredVarNames_ does not contain _dn_, then
                   1. Perform ! _env_.CreateMutableBinding(_dn_, *false*).
                   1. Perform ! _env_.InitializeBinding(_dn_, *undefined*).
                   1. Append _dn_ to _declaredVarNames_.
@@ -723,7 +881,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
                   1. Perform ! _env_.CreateImmutableBinding(_dn_, *true*).
                 1. Else,
                   1. Perform ! _env_.CreateMutableBinding(_dn_, *false*).
-                1. If _d_ is a |FunctionDeclaration|, a |GeneratorDeclaration|, an |AsyncFunctionDeclaration|, or an |AsyncGeneratorDeclaration|, then
+                1. If _d_ is either a |FunctionDeclaration|, a |GeneratorDeclaration|, an |AsyncFunctionDeclaration|, or an |AsyncGeneratorDeclaration|, then
                   1. Let _fo_ be InstantiateFunctionObject of _d_ with arguments _env_ and _privateEnv_.
                   1. Perform ! _env_.InitializeBinding(_dn_, _fo_).
             1. Remove _moduleContext_ from the execution context stack.
@@ -732,12 +890,62 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
         </emu-clause>
       </emu-clause>
 
-      <emu-clause id="sec-FinishLoadingImportedModule" type="abstract operation" number="8">
+      <emu-clause id="sec-HostLoadImportedModule" type="host-defined abstract operation" number="8">
+        <h1>
+          HostLoadImportedModule (
+            _referrer_: a Script Record, a Cyclic Module Record, or a Realm Record,
+            <del>_specifier_: a String,</del>
+            <ins>_moduleRequest_: a ModuleRequest Record,</ins>
+            _hostDefined_: anything,
+            _payload_: a GraphLoadingState Record or a PromiseCapability Record,
+          ): ~unused~
+        </h1>
+        <dl class="header">
+          <dt>description</dt>
+          <dd></dd>
+        </dl>
+
+        <emu-note id="note-HostLoadImportedModule-referrer-Realm-Record">
+          <p>An example of when _referrer_ can be a Realm Record is in a web browser host. There, if a user clicks on a control given by</p>
+
+          <pre><code class="html">&lt;button type="button" onclick="import('./foo.mjs')"&gt;Click me&lt;/button&gt;</code></pre>
+
+          <p>there will be no active script or module at the time the <emu-xref href="#sec-import-calls">`import()`</emu-xref> expression runs. More generally, this can happen in any situation where the host pushes execution contexts with *null* ScriptOrModule components onto the execution context stack.</p>
+        </emu-note>
+
+        <p>An implementation of HostLoadImportedModule must conform to the following requirements:</p>
+        <ul>
+          <li>
+            The host environment must perform FinishLoadingImportedModule(_referrer_, <del>_specifier_</del><ins>_moduleRequest_</ins>, _payload_, _result_), where _result_ is either a normal completion containing the loaded Module Record or a throw completion, either synchronously or asynchronously.
+          </li>
+          <li>
+            <p>If this operation is called multiple times with <del>the same</del><ins>two</ins> (_referrer_, <del>_specifier_</del><ins>_moduleRequest_</ins>) pair<ins>s</ins> such that:</p>
+            <ul>
+              <li><ins>the first _referrer_ is the same as the second _referrer_;</ins></li>
+              <li><ins>the first _moduleRequest_.[[Specifier]] is the same as the second _moduleRequest_.[[Specifier]];</ins></li>
+              <li>it performs FinishLoadingImportedModule(_referrer_, <del>_specifier_</del><ins>_moduleRequest_</ins>, _payload_, _result_) where _result_ is a normal completion,</li>
+            </ul>
+            <p>then it must perform FinishLoadingImportedModule(_referrer_, <del>_specifier_</del><ins>_moduleRequest_</ins>, _payload_, _result_) with the same _result_ each time.</p>
+          </li>
+          <li>
+            The operation must treat _payload_ as an opaque value to be passed through to FinishLoadingImportedModule.
+          </li>
+          <li>
+            <p><ins>When `[[Phase]]` is set to ~source~, this should not affect the identity or state of the resultant Module Record as if it had been called for the ~evaluation~ phase.</ins></p>
+            <p><ins>In addition, the ~source~ phase indicates that preloading should not take place in the host for this module.</ins></p>
+          </li>
+        </ul>
+
+        <p>The actual process performed is host-defined, but typically consists of performing whatever I/O operations are necessary to load the appropriate Module Record. Multiple different <del>(_referrer_, _specifier_) pairs</del><ins>(_referrer_, _moduleRequest_.[[Specifer]]) pairs</ins> may map to the same Module Record instance. The actual mapping semantics is host-defined but typically a normalization process is applied to _specifier_ as part of the mapping process. A typical normalization process would include actions such as expansion of relative and abbreviated path specifiers.</p>
+      </emu-clause>
+
+      <emu-clause id="sec-FinishLoadingImportedModule" type="abstract operation" number="9">
         <h1>
           FinishLoadingImportedModule (
             _referrer_: a Script Record, a Cyclic Module Record, or a Realm Record,
-            _specifier_: a String,
-            _state_: a GraphLoadingState Record or a DynamicImportState Record,
+            <del>_specifier_: a String,</del>
+            <ins>_moduleRequest_: a ModuleRequest Record,</ins>
+            _payload_: a GraphLoadingState Record or a PromiseCapability Record,
             _result_: either a normal completion containing a Module Record or a throw completion,
           ): ~unused~
         </h1>
@@ -747,13 +955,13 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
         </dl>
         <emu-alg>
           1. If _result_ is a normal completion, then
-            1. If _referrer_.[[LoadedModules]] contains a Record _record_ such that _record_.[[Specifier]] is _specifier_, then
+            1. If _referrer_.[[LoadedModules]] contains a Record _record_ such that _record_.[[Specifier]] is <del>_specifier_</del><ins>_moduleRequest_.[[Specifier]]</ins>, then
               1. Assert: _record_.[[Module]] is _result_.[[Value]].
-            1. Else, append the Record { [[Specifier]]: _specifier_, [[Module]]: _result_.[[Value]] } to _referrer_.[[LoadedModules]].
-          1. If _state_ is a GraphLoadingState Record, then
-            1. Perform ContinueModuleLoading(_state_, <ins>_referrer_, _specifier_,</ins> _result_).
+            1. Else, append the Record { [[Specifier]]: _moduleRequest_.[[Specifier]], [[Module]]: _result_.[[Value]] } to _referrer_.[[LoadedModules]].
+          1. If _payload_ is a GraphLoadingState Record, then
+            1. Perform ContinueModuleLoading(_payload_, <ins>_moduleRequest_.[[Phase]],</ins> _result_).
           1. Else,
-            1. Perform ContinueDynamicImport(_state_, _result_).
+            1. Perform ContinueDynamicImport(_payload_, <ins>_moduleRequest_.[[Phase]],</ins> _result_).
         </emu-alg>
       </emu-clause>
     </emu-clause>
@@ -766,7 +974,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
       ImportDeclaration :
         `import` ImportClause FromClause `;`
         `import` ModuleSpecifier `;`
-        <ins>`import` `module` ImportedBinding FromClause `;`</ins>
+        <ins>`import` `source` ImportedBinding FromClause `;`</ins>
 
       ImportClause :
         ImportedDefaultBinding
@@ -803,7 +1011,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
       ImportedBinding :
         BindingIdentifier[~Yield, +Await]
     </emu-grammar>
-  
+
     <emu-clause id="sec-static-semantics-importentries" oldids="sec-module-semantics-static-semantics-importentries,sec-imports-static-semantics-importentries" type="syntax-directed operation">
       <h1>Static Semantics: ImportEntries ( ): a List of ImportEntry Records</h1>
       <dl class="header">
@@ -828,19 +1036,114 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
       </emu-alg>
       <emu-grammar>ImportDeclaration : `import` ImportClause FromClause `;`</emu-grammar>
       <emu-alg>
-        1. Let _module_ be the sole element of ModuleRequests of |FromClause|.
+        1. Let _module_ be <del>the sole element of ModuleRequests</del><ins>SV</ins> of |FromClause|.
         1. Return ImportEntriesForModule of |ImportClause| with argument _module_.
       </emu-alg>
       <emu-grammar>ImportDeclaration : `import` ModuleSpecifier `;`</emu-grammar>
       <emu-alg>
         1. Return a new empty List.
       </emu-alg>
-      <emu-grammar><ins>ImportDeclaration : `import` `module` ImportedBinding FromClause `;`</ins></emu-grammar>
+      <emu-grammar><ins>ImportDeclaration : `import` `source` ImportedBinding FromClause `;`</ins></emu-grammar>
       <emu-alg>
         1. <ins>Let _localName_ be the sole element of BoundNames of |ImportedBinding|.</ins>
-        1. <ins>Let _entry_ be the ImportEntry Record { [[ModuleRequest]]: _module_, [[ImportName]]: ~module~, [[LocalName]]: _localName_ }.</ins>
-        1. <ins>Return &laquo; _entry_ &raquo;.</ins>
+        1. <ins>Let _entry_ be the ImportEntry Record { [[ModuleRequest]]: _module_, [[ImportName]]: ~source~, [[LocalName]]: _localName_ }.</ins>
+        1. <ins>Return « _entry_ »</ins>.
       </emu-alg>
     </emu-clause>
   </emu-clause>
 </emu-clause>
+
+<emu-clause id="sec-reflection" number=28>
+  <h1>Reflection</h1>
+  <emu-clause id="sec-module-source-objects">
+    <h1><ins>Module Source Objects</ins></h1>
+    <p>Module Source Objects represent modules in their source import phase, which are not linked, instantiated or executed.</p>
+    <p>All Module Source Objects should have a prototype of %AbstractModuleSource%.prototype and define a [[ModuleSourceRecord]] internal slot.</p>
+    <p>Hosts may define their own Module Source subclasses for custom module record types.</p>
+
+    <emu-clause id="sec-%abstractmodulesource%-constructor">
+      <h1>The %AbstractModuleSource% Constructor</h1>
+      <p>The %AbstractModuleSource% constructor:</p>
+      <ul>
+        <li>is <dfn>%AbstractModuleSource%</dfn>.</li>
+        <li>along with its corresponding prototype object, provides common properties that are inherited by module source constructors and their instances.</li>
+        <li>does not have a global name or appear as a property of the global object.</li>
+        <li>acts as the abstract superclass of the _ModuleSource_ constructor.</li>
+        <li>will throw an error when invoked, because it is an abstract class constructor. The module source constructors do not perform a `super` call to it.</li>
+      </ul>
+
+      <emu-clause id="sec-%abstractmodulesource%">
+        <h1>%AbstractModuleSource% ( )</h1>
+        <p>This function performs the following steps when called:</p>
+        <emu-alg>
+          1. Throw a *TypeError* exception.
+        </emu-alg>
+        <p>The *"length"* property of this function is *+0*<sub>𝔽</sub>.</p>
+      </emu-clause>
+    </emu-clause>
+
+    <emu-clause id="sec-properties-of-the-%abstractmodulesource%-intrinsic-object">
+      <h1>Properties of the %AbstractModuleSource% Intrinsic Object</h1>
+      <p>The %AbstractModuleSource% intrinsic object:</p>
+      <ul>
+        <li>has a [[Prototype]] internal slot whose value is %Function.prototype%.</li>
+        <li>has a *"name"* property whose value is *"AbstractModuleSource"*.</li>
+        <li>has the following properties:</li>
+      </ul>
+
+      <emu-clause id="sec-%abstractmodulesource%.prototype">
+        <h1>%AbstractModuleSource%.prototype</h1>
+        <p>The initial value of %AbstractModuleSource%`.prototype` is the %AbstractModuleSource% prototype object.</p>
+        <p>This property has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *false* }.</p>
+      </emu-clause>
+    </emu-clause>
+
+    <emu-clause id="sec-properties-of-the-%abstractmodulesource%-prototype-object">
+      <h1>Properties of the %AbstractModuleSource% Prototype Object</h1>
+      <p>The <dfn>%AbstractModuleSource% prototype object</dfn>:</p>
+      <ul>
+        <li>has a [[Prototype]] internal slot whose value is %Object.prototype%.</li>
+        <li>is <dfn>%AbstractModuleSource.prototype%</dfn>.</li>
+        <li>is an ordinary object.</li>
+        <li>does not have a global name or appear as a property of the global object.</li>
+        <li>does not have a [[ModuleSourceRecord]] slot that is specific to _AbstractModuleSource_ and _AbstractModuleSource_ subclass instance objects.</li>
+        <li>has the following properties:</li>
+      </ul>
+
+      <emu-clause id="sec-%abstractmodulesource%.prototype.constructor">
+        <h1>%AbstractModuleSource%.prototype.constructor</h1>
+        <p>The initial value of %AbstractModuleSource%`.prototype.constructor` is %AbstractModuleSource%.</p>
+      </emu-clause>
+
+      <emu-clause id="sec-get-%abstractmodulesource%.prototype.@@tostringtag">
+        <h1>get %AbstractModuleSource%.prototype [ @@toStringTag ]</h1>
+        <p>%AbstractModuleSource%.prototype `[@@toStringTag]` is an accessor property whose set accessor function is *undefined*. Its get accessor function performs the following steps when called:</p>
+        <emu-alg>
+          1. Let _O_ be the *this* value.
+          1. If _O_ is not an Object, return *undefined*.
+          1. If _O_ does not have a [[ModuleSourceRecord]] internal slot, return *undefined*.
+          1. Let _name_ be _O_.[[ModuleSourceRecord]].[[SourceClassName]]
+          1. Assert: _name_ is a String.
+          1. Return _name_.
+        </emu-alg>
+        <p>This property has the attributes { [[Enumerable]]: *false*, [[Configurable]]: *true* }.</p>
+        <p>The initial value of the *"name"* property of this function is *"get [Symbol.toStringTag]"*.</p>
+      </emu-clause>
+    </emu-clause>
+  </emu-clause>
+</emu-clause>
+
+<emu-annex id="sec-host-layering-points">
+  <h1>Host Layering Points</h1>
+
+  <emu-annex id="sec-host-defined-fields-summary">
+    <h1>Host-defined Fields</h1>
+    <p>[[HostDefined]] on Realm Records: See <emu-xref href="#table-realm-record-fields"></emu-xref>.</p>
+    <p>[[HostDefined]] on Script Records: See <emu-xref href="#table-script-records"></emu-xref>.</p>
+    <p>[[HostDefined]] on Module Records: See <emu-xref href="#table-module-record-fields"></emu-xref>.</p>
+    <p><ins>[[HostDefined]] on ModuleSource Records: See <emu-xref href="#table-modulesource-record-fields"></emu-xref>.</ins></p>
+    <p>[[HostDefined]] on JobCallback Records: See <emu-xref href="#table-jobcallback-records"></emu-xref>.</p>
+    <p>[[HostSynchronizesWith]] on Candidate Executions: See <emu-xref href="#table-candidate-execution-records"></emu-xref>.</p>
+    <p>[[IsHTMLDDA]]: See <emu-xref href="#sec-IsHTMLDDA-internal-slot"></emu-xref>.</p>
+  </emu-annex>
+</emu-annex>
