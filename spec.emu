@@ -198,10 +198,9 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
           1. <ins>For each ModuleRequest Record _mr_ of _additionalRequests_, do</ins>
             1. <ins>Let _found_ be *false*.</ins>
             1. <ins>For each ModuleRequest Record _mr2_ of _requests_, do</ins>
-              1. <ins>If _mr_.[[Specifer]] is _mr2_.[[Specifer]], then</ins>
+              1. <ins>If _mr_.[[Specifer]] is _mr2_.[[Specifer]] and _mr_.[[Phase]] is _mr2_.[[Phase]], then</ins>
                 1. <ins>Assert: _found_ is *false*.</ins>
                 1. <ins>Set _found_ to *true*.</ins>
-                1. <ins>If _mr2_.[[Phase]] is ~source~ and _mr_.[[Phase]] is ~evaluation~, set _mr2_.[[Phase]] to ~evaluation~.</ins>
             1. <del>If _moduleNames_ does not contain _name_, then</del>
             1. <ins>If _found_ is *false*, then</ins>
               1. Append <del>_name_</del><ins>_mr_</ins> to <del>_moduleNames_</del><ins>_requests_</ins>.
