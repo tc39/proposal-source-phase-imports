@@ -682,8 +682,10 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
             <emu-alg>
               1. If _state_.[[IsLoading]] is *false*, return ~unused~.
               1. If _moduleCompletion_ is a normal completion, then
-                1. <ins>Let _moduleRequest_ be the ModuleRequest Record in _referrer_.[[RequestedModules]] whose [[Specifier]] is _specifier_.</ins>
-                1. Perform InnerModuleLoading(_state_, _moduleCompletion_.[[Value]], <ins>_moduleRequest_.[[Phase]]</ins>).
+                1. <ins>Let _phase_ be ~source~.</ins>
+                1. <ins>If _referrer_.[[RequestedModules]] contains a ModuleRequest Record whose [[Specifer]] is _specifier_ and whose [[Phase]] is ~evaluation~, then</ins>
+                  1. <ins>Set _phase_ to ~evaluation~.</ins>
+                1. Perform InnerModuleLoading(_state_, _moduleCompletion_.[[Value]]<ins>, _phase_</ins>).
               1. Else,
                 1. Set _state_.[[IsLoading]] to *false*.
                 1. Perform ! Call(_state_.[[PromiseCapability]].[[Reject]], *undefined*, « _moduleCompletion_.[[Value]] »).
