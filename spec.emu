@@ -968,7 +968,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
       ImportDeclaration :
         `import` ImportClause FromClause `;`
         `import` ModuleSpecifier `;`
-        <ins>`import` `source` ImportedBinding FromClause `;`</ins>
+        <ins>`import` `source` [no LineTerminator here] ImportedBinding FromClause `;`</ins>
 
       ImportClause :
         ImportedDefaultBinding
@@ -1005,6 +1005,19 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
       ImportedBinding :
         BindingIdentifier[~Yield, +Await]
     </emu-grammar>
+
+    <emu-note>
+      <p>|LineTerminator| is disallowed between the `source` and |ImportedBinding| for forward compatibility with the <a href="https://github.com/tc39/proposal-module-declarations">module declarations proposal</a>.</p>
+      <pre><code class="js">import source
+from
+x
+"url"</code></pre>
+      <p>For the above example, this is required to disambiguate between</p>
+      <pre><code class="js">import source; from; x; "url";</code></pre>
+      <p>and</p>
+      <pre><code class="js">import source from x "url";</code></pre>
+      <p>in the presence of module declaration local imports, without incurring significant parser complexity.</p>
+    </emu-note>
 
     <emu-clause id="sec-static-semantics-importentries" oldids="sec-module-semantics-static-semantics-importentries,sec-imports-static-semantics-importentries" type="syntax-directed operation">
       <h1>Static Semantics: ImportEntries ( ): a List of ImportEntry Records</h1>
