@@ -968,7 +968,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
       ImportDeclaration :
         `import` ImportClause FromClause `;`
         `import` ModuleSpecifier `;`
-        <ins>`import` `source` ImportedBinding FromClause `;`</ins>
+        <ins>`import` `source` [no LineTerminator here] ImportedBinding FromClause `;`</ins>
 
       ImportClause :
         ImportedDefaultBinding
@@ -1005,6 +1005,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
       ImportedBinding :
         BindingIdentifier[~Yield, +Await]
     </emu-grammar>
+
 
     <emu-clause id="sec-static-semantics-importentries" oldids="sec-module-semantics-static-semantics-importentries,sec-imports-static-semantics-importentries" type="syntax-directed operation">
       <h1>Static Semantics: ImportEntries ( ): a List of ImportEntry Records</h1>
