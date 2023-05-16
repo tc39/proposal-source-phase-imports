@@ -18,7 +18,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
     <emu-grammar type="definition">
       ImportCall[Yield, Await] :
         `import` `(` AssignmentExpression[+In, ?Yield, ?Await] `)`
-        <ins>`import` `.` `source` (` AssignmentExpression[+In, ?Yield, ?Await] `)`</ins>
+        <ins>`import` `.` `source` `(` AssignmentExpression[+In, ?Yield, ?Await] `)`</ins>
     </emu-grammar>
 
     <emu-clause id="sec-import-calls" number="10">
@@ -41,7 +41,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
           1. <del>Return _promiseCapability_.[[Promise]].</del>
         </emu-alg>
 
-        <emu-grammar><ins>ImportCall : `import` `.` `source` (` AssignmentExpression[+In, ?Yield, ?Await] `)`</ins></emu-grammar>
+        <emu-grammar><ins>ImportCall : `import` `.` `source` `(` AssignmentExpression[+In, ?Yield, ?Await] `)`</ins></emu-grammar>
         <emu-alg>
           1. <ins>Return ? EvaluateImportCall(|AssignmentExpression|, ~source~).</ins>
         </emu-alg>
