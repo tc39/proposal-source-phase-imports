@@ -50,7 +50,7 @@ to sources, to be able to support both those sources that are required to be ins
 from source text during initialization of an application, and those that are optionally or
 lazily created at runtime.
 
-The dynamic form uses a `import.phase` import call:
+The dynamic form uses a `import.<phase>` import call:
 
 ```js
 const x = await import.source("<specifier>");
