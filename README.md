@@ -43,13 +43,25 @@ ImportStatement.
 Only the above form is supported - named exports and unbound declarations are
 not supported.
 
-### Dynamic import()
+### Dynamic form
+
+Just as with static and dynamic imports, there is a need for static and dynamic access
+to sources, to be able to support both those sources that are required to be instantiated
+from source text during initialization of an application, and those that are optionally or
+lazily created at runtime.
+
+The dynamic form uses a `import.phase` import call:
 
 ```js
-const x = await import("<specifier>", { phase: "source" });
+const x = await import.source("<specifier>");
 ```
 
-For dynamic imports, import phase is specified as a separate `phase` key in the options object to dyamic import, similar to how [import attributes][] use the `with` key.
+By making the phase part of the explicit syntax, it is possible to statically distinguish between
+a full dynamic import and one that is only for a source (where dependencies don't need to be
+processed).
+
+Optional [import attributes][] may still be specified with the second argument in a `with` key,
+just like for dynamic import, and without conflict due to the design of phased evaluation.
 
 ### Loading Phase
 
@@ -60,7 +72,7 @@ as another type of phase representing an earlier phase of the loading process.
 
 ```js
 import asset x from "<specifier>";
-await import("<specifier>", { phase: "asset" });
+await import.asset("<specifier>");
 ```
 
 Only the `source` import source phase is specified by this proposal.

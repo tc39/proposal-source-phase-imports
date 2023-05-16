@@ -12,109 +12,110 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
 <emu-clause id="sec-ecmascript-language-expressions" number="13">
   <h1>ECMAScript Language: Expressions</h1>
 
-  <emu-clause id="sec-import-calls" number="3.10">
-    <h1>Import Calls</h1>
+  <emu-clause id="sec-left-hand-side-expressions" number="3">
+    <h1>Left-Hand-Side Expressions</h1>
+    <h2>Syntax</h2>
+    <emu-grammar type="definition">
+      ImportCall[Yield, Await] :
+        `import` `(` AssignmentExpression[+In, ?Yield, ?Await] `)`
+        <ins>`import` `.` `source` (` AssignmentExpression[+In, ?Yield, ?Await] `)`</ins>
+    </emu-grammar>
 
-    <emu-clause id="sec-import-call-runtime-semantics-evaluation" type="sdo">
-      <h1>Runtime Semantics: Evaluation</h1>
+    <emu-clause id="sec-import-calls" number="10">
+      <h1>Import Calls</h1>
 
-      <emu-grammar>ImportCall : `import` `(` AssignmentExpression `)`</emu-grammar>
-      <emu-alg>
-        1. <del>Let _referrer_ be GetActiveScriptOrModule().</del>
-        1. <del>If _referrer_ is *null*, set _referrer_ to the current Realm Record.</del>
-        1. <del>Let _argRef_ be ? Evaluation of |AssignmentExpression|.</del>
-        1. <del>Let _specifier_ be ? GetValue(_argRef_).</del>
-        1. <del>Let _promiseCapability_ be ! NewPromiseCapability(%Promise%).</del>
-        1. <del>Let _specifierString_ be Completion(ToString(_specifier_)).</del>
-        1. <del>IfAbruptRejectPromise(_specifierString_, _promiseCapability_).</del>
-        1. <del>Perform HostLoadImportedModule(_referrer_, _specifierString_, ~empty~, _promiseCapability_).</del>
-        1. <del>Return _promiseCapability_.[[Promise]].</del>
-        1. <ins>Let _specifierRef_ be the result of evaluating |AssignmentExpression|.</ins>
-        1. <ins>Let _specifier_ be ? GetValue(_specifierRef_).</ins>
-        1. <ins>Return EvaluateImportCall(_specifier_, *undefined*).</ins>
-      </emu-alg>
+      <emu-clause id="sec-import-call-runtime-semantics-evaluation" type="sdo">
+        <h1>Runtime Semantics: Evaluation</h1>
 
-      <emu-grammar><ins>ImportCall : `import` `(` AssignmentExpression `,` AssignmentExpression `)`</ins></emu-grammar>
-      <emu-alg>
-        1. <ins>Let _specifierRef_ be the result of evaluating the first |AssignmentExpression|.</ins>
-        1. <ins>Let _specifier_ be ? GetValue(_specifierRef_).</ins>
-        1. <ins>Let _optionsRef_ be the result of evaluating the second |AssignmentExpression|.</ins>
-        1. <ins>Let _options_ be ? GetValue(_optionsRef_).</ins>
-        1. <ins>Return EvaluateImportCall(_specifier_, _options_).</ins>
-      </emu-alg>
+        <emu-grammar><del>ImportCall : `import` `(` AssignmentExpression `)`</del></emu-grammar>
+        <emu-alg>
+          1. <ins>Return ? EvaluateImportCall(|AssignmentExpression|, ~evaluation~).</ins>
+          1. <del>Let _referrer_ be GetActiveScriptOrModule().</del>
+          1. <del>If _referrer_ is *null*, set _referrer_ to the current Realm Record.</del>
+          1. <del>Let _argRef_ be ? Evaluation of |AssignmentExpression|.</del>
+          1. <del>Let _specifier_ be ? GetValue(_argRef_).</del>
+          1. <del>Let _promiseCapability_ be ! NewPromiseCapability(%Promise%).</del>
+          1. <del>Let _specifierString_ be Completion(ToString(_specifier_)).</del>
+          1. <del>IfAbruptRejectPromise(_specifierString_, _promiseCapability_).</del>
+          1. <del>Perform HostLoadImportedModule(_referrer_, _specifierString_, ~empty~, _promiseCapability_).</del>
+          1. <del>Return _promiseCapability_.[[Promise]].</del>
+        </emu-alg>
+
+        <emu-grammar><ins>ImportCall : `import` `.` `source` (` AssignmentExpression[+In, ?Yield, ?Await] `)`</ins></emu-grammar>
+        <emu-alg>
+          1. <ins>Return ? EvaluateImportCall(|AssignmentExpression|, ~source~).</ins>
+        </emu-alg>
+      </emu-clause>
 
       <emu-clause id="sec-evaluate-import-call" type="abstract operation">
-        <h1><ins>EvaluateImportCall ( _specifier_ , _options_ )</ins></h1>
+        <h1>
+          <ins>
+            EvaluateImportCall (
+              _specifierExpression_: a ParseNode,
+              _phase_: ~source~ or ~evaluation~
+            ): either a normal completion containing a Promise or a throw completion
+          </ins>
+        </h1>
         <dl class="header"></dl>
         <emu-alg>
           1. Let _referrer_ be GetActiveScriptOrModule().
           1. If _referrer_ is *null*, set _referrer_ to the current Realm Record.
+          1. Let _specifierRef_ be the result of evaluating _specifierExpression_.
+          1. Let _specifier_ be ? GetValue(_specifierRef_).
           1. Let _promiseCapability_ be ! NewPromiseCapability(%Promise%).
           1. Let _specifierString_ be Completion(ToString(_specifier_)).
           1. IfAbruptRejectPromise(_specifierString_, _promiseCapability_).
-          1. Let _phase_ be ~evaluation~.
-          1. If _options_ is not *undefined*, then
-            1. If Type(_options_) is not Object,
-              1. Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, &laquo; a newly created *TypeError* object &raquo;).
-              1. Return _promiseCapability_.[[Promise]].
-            1. Let _phaseOption_ be Get(_options_, *"phase"*).
-            1. IfAbruptRejectPromise(_phaseOption_, _promiseCapability_).
-            1. If _phaseOption_ is not *undefined*,
-              1. If Type(_phaseOption_) is not *"source"*, then
-                1. Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, &laquo; a newly created *TypeError* object &raquo;).
-                1. Return _promiseCapability_.[[Promise]].
-              1. Set _phase_ to ~source~.
           1. Let _moduleRequest_ be a new ModuleRequest Record { [[Specifier]]: _specifierString_, [[Phase]]: _phase_ }.
           1. Perform HostLoadImportedModule(_referrer_, _moduleRequest_, ~empty~, _promiseCapability_).
           1. Return _promiseCapability_.[[Promise]].
         </emu-alg>
-      </emu-clause>
 
-      <emu-clause id="sec-ContinueDynamicImport" type="abstract operation">
-        <h1>
-          ContinueDynamicImport (
-            _promiseCapability_: a PromiseCapability Record,
-            <ins>_phase_: ~source~ or ~evaluation~,</ins>
-            _moduleCompletion_: either a normal completion containing a Module Record or a throw completion,
-          ): ~unused~
-        </h1>
-        <dl class="header">
-          <dt>description</dt>
-          <dd>It completes the process of a dynamic import originally started by an <emu-xref href="#sec-import-calls">`import()`</emu-xref> call, resolving or rejecting the promise returned by that call as appropriate.</dd>
-        </dl>
-        <emu-alg>
-          1. If _moduleCompletion_ is an abrupt completion, then
-            1. Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, &laquo; _moduleCompletion_.[[Value]] &raquo;).
-            1. Return ~unused~.
-          1. Let _module_ be _moduleCompletion_.[[Value]].
-          1. <ins>If _phase_ is ~source~, then</ins>
-            1. <ins>Let _moduleSourceObject_ be Completion(_module_.GetModuleSource()).</ins>
-            1. <ins>If _moduleSourceObject_ is an abrupt completion, then</ins>
-              1. <ins>Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, &laquo; _moduleSourceObject_.[[Value]] &raquo;).</ins>
-            1. <ins>Else,</ins>
-              1. <ins>Perform ! Call(_promiseCapability_.[[Resolve]], *undefined*, &laquo; _moduleSourceObject_.[[Value]] &raquo;).</ins>
-            1. <ins>Return ~unused~.</ins>
-          1. Let _loadPromise_ be _module_.LoadRequestedModules().
-          1. Let _rejectedClosure_ be a new Abstract Closure with parameters (_reason_) that captures _promiseCapability_ and performs the following steps when called:
-            1. Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, &laquo; _reason_ &raquo;).
-            1. Return ~unused~.
-          1. Let _onRejected_ be CreateBuiltinFunction(_rejectedClosure_, 1, *""*, &laquo; &raquo;).
-          1. Let _linkAndEvaluateClosure_ be a new Abstract Closure with no parameters that captures _module_, _promiseCapability_, and _onRejected_ and performs the following steps when called:
-            1. Let _link_ be Completion(_module_.Link()).
-            1. If _link_ is an abrupt completion, then
-              1. Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, &laquo; _link_.[[Value]] &raquo;).
+        <emu-clause id="sec-ContinueDynamicImport" type="abstract operation">
+          <h1>
+            ContinueDynamicImport (
+              _promiseCapability_: a PromiseCapability Record,
+              <ins>_phase_: ~source~ or ~evaluation~,</ins>
+              _moduleCompletion_: either a normal completion containing a Module Record or a throw completion,
+            ): ~unused~
+          </h1>
+          <dl class="header">
+            <dt>description</dt>
+            <dd>It completes the process of a dynamic import originally started by an <emu-xref href="#sec-import-calls">`import()`</emu-xref> call, resolving or rejecting the promise returned by that call as appropriate.</dd>
+          </dl>
+          <emu-alg>
+            1. If _moduleCompletion_ is an abrupt completion, then
+              1. Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, &laquo; _moduleCompletion_.[[Value]] &raquo;).
               1. Return ~unused~.
-            1. Let _evaluatePromise_ be _module_.Evaluate().
-            1. Let _fulfilledClosure_ be a new Abstract Closure with no parameters that captures _module_ and _promiseCapability_ and performs the following steps when called:
-              1. Let _namespace_ be GetModuleNamespace(_module_).
-              1. Perform ! Call(_promiseCapability_.[[Resolve]], *undefined*, &laquo; _namespace_ &raquo;).
+            1. Let _module_ be _moduleCompletion_.[[Value]].
+            1. <ins>If _phase_ is ~source~, then</ins>
+              1. <ins>Let _moduleSourceObject_ be Completion(_module_.GetModuleSource()).</ins>
+              1. <ins>If _moduleSourceObject_ is an abrupt completion, then</ins>
+                1. <ins>Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, &laquo; _moduleSourceObject_.[[Value]] &raquo;).</ins>
+              1. <ins>Else,</ins>
+                1. <ins>Perform ! Call(_promiseCapability_.[[Resolve]], *undefined*, &laquo; _moduleSourceObject_.[[Value]] &raquo;).</ins>
+              1. <ins>Return ~unused~.</ins>
+            1. Let _loadPromise_ be _module_.LoadRequestedModules().
+            1. Let _rejectedClosure_ be a new Abstract Closure with parameters (_reason_) that captures _promiseCapability_ and performs the following steps when called:
+              1. Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, &laquo; _reason_ &raquo;).
               1. Return ~unused~.
-            1. Let _onFulfilled_ be CreateBuiltinFunction(_fulfilledClosure_, *""*, 0, &laquo; &raquo;).
-            1. Perform PerformPromiseThen(_evaluatePromise_, _onFulfilled_, _onRejected_).
-          1. Let _linkAndEvaluate_ be CreateBuiltinFunction(_linkAndEvaluateClosure_, *""*, 0, &laquo; &raquo;).
-          1. Perform PerformPromiseThen(_loadPromise_, _linkAndEvaluate_, _onRejected_).
-          1. Return ~unused~.
-        </emu-alg>
+            1. Let _onRejected_ be CreateBuiltinFunction(_rejectedClosure_, 1, *""*, &laquo; &raquo;).
+            1. Let _linkAndEvaluateClosure_ be a new Abstract Closure with no parameters that captures _module_, _promiseCapability_, and _onRejected_ and performs the following steps when called:
+              1. Let _link_ be Completion(_module_.Link()).
+              1. If _link_ is an abrupt completion, then
+                1. Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, &laquo; _link_.[[Value]] &raquo;).
+                1. Return ~unused~.
+              1. Let _evaluatePromise_ be _module_.Evaluate().
+              1. Let _fulfilledClosure_ be a new Abstract Closure with no parameters that captures _module_ and _promiseCapability_ and performs the following steps when called:
+                1. Let _namespace_ be GetModuleNamespace(_module_).
+                1. Perform ! Call(_promiseCapability_.[[Resolve]], *undefined*, &laquo; _namespace_ &raquo;).
+                1. Return ~unused~.
+              1. Let _onFulfilled_ be CreateBuiltinFunction(_fulfilledClosure_, *""*, 0, &laquo; &raquo;).
+              1. Perform PerformPromiseThen(_evaluatePromise_, _onFulfilled_, _onRejected_).
+            1. Let _linkAndEvaluate_ be CreateBuiltinFunction(_linkAndEvaluateClosure_, *""*, 0, &laquo; &raquo;).
+            1. Perform PerformPromiseThen(_loadPromise_, _linkAndEvaluate_, _onRejected_).
+            1. Return ~unused~.
+          </emu-alg>
+        </emu-clause>
       </emu-clause>
     </emu-clause>
   </emu-clause>
