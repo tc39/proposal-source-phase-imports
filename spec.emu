@@ -27,7 +27,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
       <emu-clause id="sec-import-call-runtime-semantics-evaluation" type="sdo">
         <h1>Runtime Semantics: Evaluation</h1>
 
-        <emu-grammar><del>ImportCall : `import` `(` AssignmentExpression `)`</del></emu-grammar>
+        <emu-grammar>ImportCall : `import` `(` AssignmentExpression `)`</emu-grammar>
         <emu-alg>
           1. <ins>Return ? EvaluateImportCall(|AssignmentExpression|, ~evaluation~).</ins>
           1. <del>Let _referrer_ be GetActiveScriptOrModule().</del>
