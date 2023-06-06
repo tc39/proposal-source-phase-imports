@@ -969,7 +969,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
       ImportDeclaration :
         `import` ImportClause FromClause `;`
         `import` ModuleSpecifier `;`
-        <ins>`import` `source` [no LineTerminator here] ImportedBinding FromClause `;`</ins>
+        <ins>`import` `source` ImportedBinding FromClause `;`</ins>
 
       ImportClause :
         ImportedDefaultBinding
