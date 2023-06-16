@@ -250,53 +250,6 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
         </emu-alg>
       </emu-clause>
 
-      <emu-clause id="sec-modulesource-record">
-        <h1><ins>ModuleSource Records</ins></h1>
-
-        <p>A <dfn id="modulesource-record" variants="ModuleSource Records">ModuleSource Record</dfn> represents the request to import a module up to a given phase. It consists of the following fields:</p>
-        <emu-table id="table-modulesource-record-fields" caption="ModuleSource Record fields">
-          <table>
-            <tbody>
-              <tr>
-                <th>
-                  Field Name
-                </th>
-                <th>
-                  Value Type
-                </th>
-                <th>
-                  Meaning
-                </th>
-              </tr>
-              <tr>
-                <td>
-                  [[SourceClassName]]
-                </td>
-                <td>
-                  String
-                </td>
-                <td>
-                  The unique source class name string used to represent this module source. Source Text Module Records are usually represented by the *"ModuleSource"* class.
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  [[HostDefined]]
-                </td>
-                <td>
-                  anything (default value is *undefined*)
-                </td>
-                <td>
-                  Field reserved for use by host environments to associate additional information with module sources.
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </emu-table>
-
-        <emu-note type="editor">In general, this proposal replaces places where module specifiers are passed around with ModuleRequest Records. For example, several syntax-directed operations, such as ModuleRequests produce Lists of ModuleRequest Records rather than Lists of Strings which are interpreted as module specifiers. Some algorithms like ImportEntries and ImportEntriesForModule pass around ModuleRequest Records rather than Strings, in a way which doesn't require any particular textual change. Additionally, record fields in Cyclic Module Records and Source Text Module Records which contained Lists of Strings are replaced by Lists of ModuleRequest Records, as indicated above.</emu-note>
-      </emu-clause>
-
       <emu-clause id="sec-abstract-module-records">
         <h1>Abstract Module Records</h1>
         <p>A <dfn variants="Module Records">Module Record</dfn> encapsulates structural information about the imports and exports of a single module. This information is used to link the imports and exports of sets of connected modules. A Module Record includes four fields that are only used when evaluating a module.</p>
@@ -425,7 +378,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
               <td>
                 <p><ins>It returns either a normal completion completion for the ModuleSource Object corresponding to this source Module Record's source phase (<emu-xref href="#sec-module-source-objects"></emu-xref>), or a throw completion.</ins></p>
                 <ins>When called multiple times on the same Module Record, if GetModuleSource() returns a normal completion it must always return a normal completion containing the same object.</ins>
-                <ins>The returned object should be an instance of a subclass of %AbstractModuleSource%, and it must have an internal slot [[ModuleSourceRecord]].</ins>
+                <ins>The returned object should be an instance of a subclass of %AbstractModuleSource%, and it must have an internal slot [[ModuleSourceClassName]].</ins>
               </td>
             </tr>
           </table>
@@ -1053,7 +1006,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
   <emu-clause id="sec-module-source-objects">
     <h1><ins>Module Source Objects</ins></h1>
     <p>Module Source Objects represent modules in their source import phase, which are not linked, instantiated or executed.</p>
-    <p>All Module Source Objects should have a prototype of %AbstractModuleSource%.prototype and define a [[ModuleSourceRecord]] internal slot.</p>
+    <p>All Module Source Objects should have a prototype of %AbstractModuleSource%.prototype and define a [[ModuleSourceClassName]] internal slot.</p>
     <p>Hosts may define their own Module Source subclasses for custom module record types.</p>
 
     <emu-clause id="sec-%abstractmodulesource%-constructor">
@@ -1101,7 +1054,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
         <li>is <dfn>%AbstractModuleSource.prototype%</dfn>.</li>
         <li>is an ordinary object.</li>
         <li>does not have a global name or appear as a property of the global object.</li>
-        <li>does not have a [[ModuleSourceRecord]] slot that is specific to _AbstractModuleSource_ and _AbstractModuleSource_ subclass instance objects.</li>
+        <li>does not have a [[ModuleSourceClassName]] slot that is specific to _AbstractModuleSource_ and _AbstractModuleSource_ subclass instance objects.</li>
         <li>has the following properties:</li>
       </ul>
 
@@ -1116,8 +1069,8 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
         <emu-alg>
           1. Let _O_ be the *this* value.
           1. If _O_ is not an Object, return *undefined*.
-          1. If _O_ does not have a [[ModuleSourceRecord]] internal slot, return *undefined*.
-          1. Let _name_ be _O_.[[ModuleSourceRecord]].[[SourceClassName]]
+          1. If _O_ does not have a [[ModuleSourceClassName]] internal slot, return *undefined*.
+          1. Let _name_ be _O_.[[ModuleSourceClassName]].
           1. Assert: _name_ is a String.
           1. Return _name_.
         </emu-alg>
@@ -1136,7 +1089,6 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
     <p>[[HostDefined]] on Realm Records: See <emu-xref href="#table-realm-record-fields"></emu-xref>.</p>
     <p>[[HostDefined]] on Script Records: See <emu-xref href="#table-script-records"></emu-xref>.</p>
     <p>[[HostDefined]] on Module Records: See <emu-xref href="#table-module-record-fields"></emu-xref>.</p>
-    <p><ins>[[HostDefined]] on ModuleSource Records: See <emu-xref href="#table-modulesource-record-fields"></emu-xref>.</ins></p>
     <p>[[HostDefined]] on JobCallback Records: See <emu-xref href="#table-jobcallback-records"></emu-xref>.</p>
     <p>[[HostSynchronizesWith]] on Candidate Executions: See <emu-xref href="#table-candidate-execution-records"></emu-xref>.</p>
     <p>[[IsHTMLDDA]]: See <emu-xref href="#sec-IsHTMLDDA-internal-slot"></emu-xref>.</p>
