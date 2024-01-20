@@ -82,7 +82,7 @@ Only the `source` import source phase is specified by this proposal.
 ### Defining Module Source
 
 The object provided by the module source phase must be an object with
-`AbtractModuleSource.prototype` in its prototype chain, defined by this specification
+`AbstractModuleSource.prototype` in its prototype chain, defined by this specification
 to be a minimal shared base prototype for a compiled modular resource.
 
 In addition it defines the `@@toStringTag` getter returning the constructor name string
