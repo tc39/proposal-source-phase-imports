@@ -1997,6 +1997,17 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
         <p>The initial value of %AbstractModuleSource%`.prototype` is the %AbstractModuleSource% prototype object.</p>
         <p>This property has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *false* }.</p>
       </emu-clause>
+
+      <emu-clause id="sec-%abstractmodulesource%.isModuleSource">
+        <h1>%AbstractModuleSource%.isModuleSource ( )</h1>
+        <p>This method performs the following steps when called:</p>
+        <emu-alg>
+          1. Let _O_ be the *this* value.
+          1. Let _sourceRecordResult_ be Completion(HostGetModuleSourceRecord(_O_)).
+          1. If _sourceRecordResult_ is a normal completion, return *true*.
+          1. Return *false*.
+        </emu-alg>
+      </emu-clause>
     </emu-clause>
 
     <emu-clause id="sec-properties-of-the-%abstractmodulesource%-prototype-object">
@@ -2012,33 +2023,6 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
       <emu-clause id="sec-%abstractmodulesource%.prototype.constructor">
         <h1>%AbstractModuleSource%.prototype.constructor</h1>
         <p>The initial value of %AbstractModuleSource%`.prototype.constructor` is %AbstractModuleSource%.</p>
-      </emu-clause>
-
-      <emu-clause id="sec-%abstractmodulesource%.prototype.@@tostringtag">
-        <h1>%AbstractModuleSource%.prototype [ @@toStringTag ]</h1>
-        <p>The initial value of the @@toStringTag property is the String value *"AbstractModuleSource"*.</p>
-        <p>This property has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *true* }.</p>
-      </emu-clause>
-
-      <emu-clause id="sec-%abstractmodulesource%.prototype.@@tostringtag">
-        <h1>%AbstractModuleSource%.prototype [ @@toStringTag ]</h1>
-        <p>%AbstractModuleSource%.prototype `[@@toStringTag]` is an accessor property whose set accessor function is *undefined*. Its get accessor function performs the following steps when called:</p>
-        <emu-alg>
-          1. Return *"AbstractModuleSource"*.
-        </emu-alg>
-        <p>This property has the attributes { [[Enumerable]]: *false*, [[Configurable]]: *true* }.</p>
-        <p>The initial value of the *"name"* property of this function is *"get [Symbol.toStringTag]"*.</p>
-      </emu-clause>
-
-      <emu-clause id="sec-%abstractmodulesource%.prototype.toString">
-        <h1>%AbstractModuleSource%.prototype.isModuleSource ( )</h1>
-        <p>This method performs the following steps when called:</p>
-        <emu-alg>
-          1. Let _O_ be the *this* value.
-          1. Let _sourceRecordResult_ be Completion(HostGetModuleSourceRecord(_O_)).
-          1. If _sourceRecordResult_ is a normal completion, return *true*.
-          1. Return *false*.
-        </emu-alg>
       </emu-clause>
     </emu-clause>
   </emu-clause>
