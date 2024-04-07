@@ -6,9 +6,11 @@ Champion(s): Luca Casonato, Guy Bedford
 
 Author(s): Luca Casonato, Guy Bedford, Nicolo Ribaudo
 
-Stage: 2
+Stage: 3
 
 Stage 3 reviewers: Daniel Ehrenberg, Kris Kowal
+
+**Note:** Latest spec text is now maintained in the [ECMA-262 upstream PR](https://github.com/tc39/ecma262/pull/3094).
 
 ## Motivation
 
@@ -80,7 +82,7 @@ Only the `source` import source phase is specified by this proposal.
 ### Defining Module Source
 
 The object provided by the module source phase must be an object with
-`AbtractModuleSource.prototype` in its prototype chain, defined by this specification
+`AbstractModuleSource.prototype` in its prototype chain, defined by this specification
 to be a minimal shared base prototype for a compiled modular resource.
 
 In addition it defines the `@@toStringTag` getter returning the constructor name string
