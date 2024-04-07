@@ -1842,6 +1842,30 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
             1. Perform ContinueDynamicImport(_payload_, <ins>_moduleRequest_.[[Phase]],</ins> _result_).
         </emu-alg>
       </emu-clause>
+
+      <emu-clause id="sec-HostGetModuleSourceRecord" type="host-defined abstract operation">
+        <h1>
+          <ins>
+            HostGetModuleSourceRecord (
+              _moduleSource_: an Object,
+            ): either a normal completion containing a Module Record or a throw completion
+          </ins>
+        </h1>
+        <dl class="header">
+          <dt>description</dt>
+          <dd></dd>
+        </dl>
+
+        <p>An implementation of HostGetModuleSourceRecord must conform to the following requirements:</p>
+        <ul>
+          <li>
+            For any object which was not obtained through GetModuleSource, it should return an abrupt completion.
+          </li>
+          <li>
+            When the object passed to HostGetModuleSourceRecord was obtained through the GetModuleSource concrete method on the Module Record, it should return the original Module Record.
+          </li>
+        </ul>
+      </emu-clause>
     </emu-clause>
   </emu-clause>
 
@@ -1937,7 +1961,6 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
   <emu-clause id="sec-module-source-objects">
     <h1><ins>Module Source Objects</ins></h1>
     <p>Module Source Objects represent modules in their source import phase, which are not linked, instantiated or executed.</p>
-    <p>All Module Source Objects must define a [[ModuleSourceClassName]] internal slot.</p>
     <p>All Module Source Objects should have a prototype of %AbstractModuleSource%.prototype.</p>
     <p>Hosts may define their own %AbstractModuleSource% subclasses for custom module types.</p>
 
@@ -1991,19 +2014,31 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
         <p>The initial value of %AbstractModuleSource%`.prototype.constructor` is %AbstractModuleSource%.</p>
       </emu-clause>
 
-      <emu-clause id="sec-get-%abstractmodulesource%.prototype.@@tostringtag">
-        <h1>get %AbstractModuleSource%.prototype [ @@toStringTag ]</h1>
+      <emu-clause id="sec-%abstractmodulesource%.prototype.@@tostringtag">
+        <h1>%AbstractModuleSource%.prototype [ @@toStringTag ]</h1>
+        <p>The initial value of the @@toStringTag property is the String value *"AbstractModuleSource"*.</p>
+        <p>This property has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *true* }.</p>
+      </emu-clause>
+
+      <emu-clause id="sec-%abstractmodulesource%.prototype.@@tostringtag">
+        <h1>%AbstractModuleSource%.prototype [ @@toStringTag ]</h1>
         <p>%AbstractModuleSource%.prototype `[@@toStringTag]` is an accessor property whose set accessor function is *undefined*. Its get accessor function performs the following steps when called:</p>
         <emu-alg>
-          1. Let _O_ be the *this* value.
-          1. If _O_ is not an Object, return *undefined*.
-          1. If _O_ does not have a [[ModuleSourceClassName]] internal slot, return *undefined*.
-          1. Let _name_ be _O_.[[ModuleSourceClassName]].
-          1. Assert: _name_ is a String.
-          1. Return _name_.
+          1. Return *"AbstractModuleSource"*.
         </emu-alg>
         <p>This property has the attributes { [[Enumerable]]: *false*, [[Configurable]]: *true* }.</p>
         <p>The initial value of the *"name"* property of this function is *"get [Symbol.toStringTag]"*.</p>
+      </emu-clause>
+
+      <emu-clause id="sec-%abstractmodulesource%.prototype.toString">
+        <h1>%AbstractModuleSource%.prototype.isModuleSource ( )</h1>
+        <p>This method performs the following steps when called:</p>
+        <emu-alg>
+          1. Let _O_ be the *this* value.
+          1. Let _sourceRecordResult_ be Completion(HostGetModuleSourceRecord(_O_)).
+          1. If _sourceRecordResult_ is a normal completion, return *true*.
+          1. Return *false*.
+        </emu-alg>
       </emu-clause>
     </emu-clause>
   </emu-clause>
@@ -2012,13 +2047,23 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
 <emu-annex id="sec-host-layering-points">
   <h1>Host Layering Points</h1>
 
-  <emu-annex id="sec-host-defined-fields-summary">
-    <h1>Host-defined Fields</h1>
-    <p>[[HostDefined]] on Realm Records: See <emu-xref href="#table-realm-record-fields"></emu-xref>.</p>
-    <p>[[HostDefined]] on Script Records: See <emu-xref href="#table-script-records"></emu-xref>.</p>
-    <p>[[HostDefined]] on Module Records: See <emu-xref href="#table-module-record-fields"></emu-xref>.</p>
-    <p>[[HostDefined]] on JobCallback Records: See <emu-xref href="#table-jobcallback-records"></emu-xref>.</p>
-    <p>[[HostSynchronizesWith]] on Candidate Executions: See <emu-xref href="#table-candidate-execution-records"></emu-xref>.</p>
-    <p>[[IsHTMLDDA]]: See <emu-xref href="#sec-IsHTMLDDA-internal-slot"></emu-xref>.</p>
+  <emu-annex id="sec-host-hooks-summary">
+    <h1>Host Hooks</h1>
+    <p><b>HostCallJobCallback(...)</b></p>
+    <p><b>HostEnqueueFinalizationRegistryCleanupJob(...)</b></p>
+    <p><b>HostEnqueueGenericJob(...)</b></p>
+    <p><b>HostEnqueuePromiseJob(...)</b></p>
+    <p><b>HostEnqueueTimeoutJob(...)</b></p>
+    <p><b>HostEnsureCanCompileStrings(...)</b></p>
+    <p><b>HostFinalizeImportMeta(...)</b></p>
+    <p><b>HostGetImportMetaProperties(...)</b></p>
+    <p><b><ins>HostGetModuleSourceRecord(...)</ins></b></p>
+    <p><b>HostGrowSharedArrayBuffer(...)</b></p>
+    <p><b>HostHasSourceTextAvailable(...)</b></p>
+    <p><b>HostLoadImportedModule(...)</b></p>
+    <p><b>HostMakeJobCallback(...)</b></p>
+    <p><b>HostPromiseRejectionTracker(...)</b></p>
+    <p><b>HostResizeArrayBuffer(...)</b></p>
+    <p><b>InitializeHostDefinedRealm(...)</b></p>
   </emu-annex>
 </emu-annex>
