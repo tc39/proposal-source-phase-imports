@@ -10,9 +10,11 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
 </pre>
 
 <emu-clause id="sec-ecmascript-data-types-and-values" aoid="Type">
+  <h1>ECMAScript Data Types and Values</h1>
   <emu-clause id="sec-ecmascript-language-types">
+    <h1>ECMAScript Language Types</h1>
     <emu-clause id="sec-object-type">
-
+      <h1>Object Type</h1>
       <emu-clause id="sec-well-known-intrinsic-objects">
         <h1>Well-Known Intrinsic Objects</h1>
         <p>Well-known intrinsics are built-in objects that are explicitly referenced by the algorithms of this specification and which usually have realm-specific identities. Unless otherwise specified each intrinsic object actually corresponds to a set of similar objects, one per realm.</p>
