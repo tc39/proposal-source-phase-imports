@@ -1859,10 +1859,10 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
         <p>An implementation of HostGetModuleSourceName must conform to the following requirements:</p>
         <ul>
           <li>
-            For any object which may be obtained through GetModuleSource(), returns a normal completion for a string String corresponding to the source record type to be used as the strongly branded return value of the @@toStringTag getter on %AbstractModuleSource%.
+            For any object that is a Module Source Object, returns a normal completion for a String corresponding to the source record type to be used as the strongly branded return value of the @@toStringTag getter on %AbstractModuleSource%.
           </li>
           <li>
-            For any object which does not represent a compiled module source, returns a throw completion.
+            For any object which is not a Module Source Object, returns a throw completion.
           </li>
         </ul>
       </emu-clause>
@@ -1961,6 +1961,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
   <emu-clause id="sec-module-source-objects">
     <h1><ins>Module Source Objects</ins></h1>
     <p>Module Source Objects represent modules in their source import phase, which are not linked, instantiated or executed.</p>
+    <p>A <dfn>Module Source Object</dfn> is an object for which HostGetModuleSourceName returns a normal completion.</p>
     <p>All Module Source Objects should have a prototype of %AbstractModuleSource%.prototype.</p>
     <p>Hosts may define their own %AbstractModuleSource% subclasses for custom module types.</p>
 
