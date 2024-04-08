@@ -1164,7 +1164,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
               <td>
                 <p><ins>It returns either a normal completion containing the Module Source Object corresponding to this source Module Record's source phase (<emu-xref href="#sec-module-source-objects"></emu-xref>), or a throw completion.</ins></p>
                 <p><ins>When called multiple times on the same Module Record, if GetModuleSource() returns a normal completion it must always return a normal completion containing the same object.</ins></p>
-                <p><ins>The returned object should be an instance of a subclass of %AbstractModuleSource%, and it must have an internal slot [[ModuleSourceClassName]].</ins></p>
+                <p><ins>The returned object should have a [[Prototype]] internal slot whose value is %AbstractModuleSource.prototype%.</ins></p>
                 <p><ins>For Module Records that do not have a source representation, GetModuleSource() must always return a throw completion whose [[Value]] is a *ReferenceError*.</ins></p>
               </td>
             </tr>
@@ -1842,6 +1842,30 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
             1. Perform ContinueDynamicImport(_payload_, <ins>_moduleRequest_.[[Phase]],</ins> _result_).
         </emu-alg>
       </emu-clause>
+
+      <emu-clause id="sec-HostGetModuleSourceName" type="host-defined abstract operation">
+        <h1>
+          <ins>
+            HostGetModuleSourceName (
+              _moduleSource_: an Object,
+            ): either a normal completion containing a String or a throw completion
+          </ins>
+        </h1>
+        <dl class="header">
+          <dt>description</dt>
+          <dd></dd>
+        </dl>
+
+        <p>An implementation of HostGetModuleSourceName must conform to the following requirements:</p>
+        <ul>
+          <li>
+            For any object that is a Module Source Object, returns a normal completion for a String corresponding to the source record type to be used as the strongly branded return value of the @@toStringTag getter on %AbstractModuleSource%.
+          </li>
+          <li>
+            For any object which is not a Module Source Object, returns a throw completion.
+          </li>
+        </ul>
+      </emu-clause>
     </emu-clause>
   </emu-clause>
 
@@ -1937,7 +1961,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
   <emu-clause id="sec-module-source-objects">
     <h1><ins>Module Source Objects</ins></h1>
     <p>Module Source Objects represent modules in their source import phase, which are not linked, instantiated or executed.</p>
-    <p>All Module Source Objects must define a [[ModuleSourceClassName]] internal slot.</p>
+    <p>A <dfn>Module Source Object</dfn> is an object for which HostGetModuleSourceName returns a normal completion.</p>
     <p>All Module Source Objects should have a prototype of %AbstractModuleSource%.prototype.</p>
     <p>Hosts may define their own %AbstractModuleSource% subclasses for custom module types.</p>
 
@@ -1997,8 +2021,9 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
         <emu-alg>
           1. Let _O_ be the *this* value.
           1. If _O_ is not an Object, return *undefined*.
-          1. If _O_ does not have a [[ModuleSourceClassName]] internal slot, return *undefined*.
-          1. Let _name_ be _O_.[[ModuleSourceClassName]].
+          1. Let _sourceNameResult_ be Completion(HostGetModuleSourceName(_O_)).
+          1. If _sourceNameResult_ is an abrupt completion, return *undefined*.
+          1. Let _name_ be ! _sourceNameResult_.
           1. Assert: _name_ is a String.
           1. Return _name_.
         </emu-alg>
@@ -2012,13 +2037,23 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
 <emu-annex id="sec-host-layering-points">
   <h1>Host Layering Points</h1>
 
-  <emu-annex id="sec-host-defined-fields-summary">
-    <h1>Host-defined Fields</h1>
-    <p>[[HostDefined]] on Realm Records: See <emu-xref href="#table-realm-record-fields"></emu-xref>.</p>
-    <p>[[HostDefined]] on Script Records: See <emu-xref href="#table-script-records"></emu-xref>.</p>
-    <p>[[HostDefined]] on Module Records: See <emu-xref href="#table-module-record-fields"></emu-xref>.</p>
-    <p>[[HostDefined]] on JobCallback Records: See <emu-xref href="#table-jobcallback-records"></emu-xref>.</p>
-    <p>[[HostSynchronizesWith]] on Candidate Executions: See <emu-xref href="#table-candidate-execution-records"></emu-xref>.</p>
-    <p>[[IsHTMLDDA]]: See <emu-xref href="#sec-IsHTMLDDA-internal-slot"></emu-xref>.</p>
+  <emu-annex id="sec-host-hooks-summary">
+    <h1>Host Hooks</h1>
+    <p><b>HostCallJobCallback(...)</b></p>
+    <p><b>HostEnqueueFinalizationRegistryCleanupJob(...)</b></p>
+    <p><b>HostEnqueueGenericJob(...)</b></p>
+    <p><b>HostEnqueuePromiseJob(...)</b></p>
+    <p><b>HostEnqueueTimeoutJob(...)</b></p>
+    <p><b>HostEnsureCanCompileStrings(...)</b></p>
+    <p><b>HostFinalizeImportMeta(...)</b></p>
+    <p><b>HostGetImportMetaProperties(...)</b></p>
+    <p><b><ins>HostGetModuleSourceName(...)</ins></b></p>
+    <p><b>HostGrowSharedArrayBuffer(...)</b></p>
+    <p><b>HostHasSourceTextAvailable(...)</b></p>
+    <p><b>HostLoadImportedModule(...)</b></p>
+    <p><b>HostMakeJobCallback(...)</b></p>
+    <p><b>HostPromiseRejectionTracker(...)</b></p>
+    <p><b>HostResizeArrayBuffer(...)</b></p>
+    <p><b>InitializeHostDefinedRealm(...)</b></p>
   </emu-annex>
 </emu-annex>
