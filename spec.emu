@@ -1168,15 +1168,6 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
                 <p><ins>For Module Records that do not have a source representation, GetModuleSource() must always return a throw completion whose [[Value]] is a *ReferenceError*.</ins></p>
               </td>
             </tr>
-            <tr>
-              <td>
-                <ins>GetModuleSourceName()</ins>
-              </td>
-              <td>
-                <p><ins>For Module Records that implement a normal completion for GetModuleSource(), returns a String corresponding to the source record type to be used as the strongly branded return value of the @@toStringTag getter on %AbstractModuleSource%.</ins></p>
-                <p><ins>For Module Records that do not have a source representation, GetModuleSourceName() is never called.</ins></p>
-              </td>
-            </tr>
           </table>
         </emu-table>
       </emu-clause>
@@ -1852,12 +1843,12 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
         </emu-alg>
       </emu-clause>
 
-      <emu-clause id="sec-HostGetSourceModuleRecord" type="host-defined abstract operation">
+      <emu-clause id="sec-HostGetModuleSourceName" type="host-defined abstract operation">
         <h1>
           <ins>
-            HostGetSourceModuleRecord (
+            HostGetModuleSourceName (
               _moduleSource_: an Object,
-            ): either a normal completion containing a Module Record or a throw completion
+            ): either a normal completion containing a String or a throw completion
           </ins>
         </h1>
         <dl class="header">
@@ -1865,13 +1856,10 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
           <dd></dd>
         </dl>
 
-        <p>An implementation of HostGetSourceModuleRecord must conform to the following requirements:</p>
+        <p>An implementation of HostGetModuleSourceName must conform to the following requirements:</p>
         <ul>
           <li>
-            For any object which was not obtained through GetModuleSource, it should return an abrupt completion.
-          </li>
-          <li>
-            When the object passed to HostGetSourceModuleRecord was obtained through the GetModuleSource concrete method on the Module Record, it should return the original Module Record.
+            For any object which may be obtained through GetModuleSource(), returns a String corresponding to the source record type to be used as the strongly branded return value of the @@toStringTag getter on %AbstractModuleSource%.
           </li>
         </ul>
       </emu-clause>
@@ -2029,10 +2017,9 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
         <emu-alg>
           1. Let _O_ be the *this* value.
           1. If _O_ is not an Object, return *undefined*.
-          1. Let _sourceRecordResult_ be Completion(HostGetSourceModuleRecord(_O_)).
-          1. If _sourceRecordResult_ is an abrupt completion, return *undefined*.
-          1. Let _sourceRecord_ be ! _sourceRecordResult_.
-          1. Let _name_ be _sourceRecordResult_.GetModuleSourceName().
+          1. Let _sourceNameResult_ be Completion(HostGetModuleSourceName(_O_)).
+          1. If _sourceNameResult_ is an abrupt completion, return *undefined*.
+          1. Let _name_ be ! _sourceNameResult_.
           1. Assert: _name_ is a String.
           1. Return _name_.
         </emu-alg>
@@ -2056,7 +2043,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
     <p><b>HostEnsureCanCompileStrings(...)</b></p>
     <p><b>HostFinalizeImportMeta(...)</b></p>
     <p><b>HostGetImportMetaProperties(...)</b></p>
-    <p><b><ins>HostGetSourceModuleRecord(...)</ins></b></p>
+    <p><b><ins>HostGetModuleSourceName(...)</ins></b></p>
     <p><b>HostGrowSharedArrayBuffer(...)</b></p>
     <p><b>HostHasSourceTextAvailable(...)</b></p>
     <p><b>HostLoadImportedModule(...)</b></p>
