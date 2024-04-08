@@ -1859,7 +1859,10 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
         <p>An implementation of HostGetModuleSourceName must conform to the following requirements:</p>
         <ul>
           <li>
-            For any object which may be obtained through GetModuleSource(), returns a String corresponding to the source record type to be used as the strongly branded return value of the @@toStringTag getter on %AbstractModuleSource%.
+            For any object which may be obtained through GetModuleSource(), returns a normal completion for a string String corresponding to the source record type to be used as the strongly branded return value of the @@toStringTag getter on %AbstractModuleSource%.
+          </li>
+          <li>
+            For any object which does not represent a compiled module source, returns a throw completion.
           </li>
         </ul>
       </emu-clause>
