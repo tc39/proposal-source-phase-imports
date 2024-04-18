@@ -10,8 +10,6 @@ Stage: 3
 
 Stage 3 reviewers: Daniel Ehrenberg, Kris Kowal
 
-**Note:** Latest spec text is now maintained in the [ECMA-262 upstream PR](https://github.com/tc39/ecma262/pull/3094).
-
 ## Motivation
 
 For both JavaScript and WebAssembly, there is a need to be able to more closely
