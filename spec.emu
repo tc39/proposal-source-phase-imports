@@ -1848,7 +1848,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
           <ins>
             HostGetModuleSourceName (
               _moduleSource_: an Object,
-            ): either a normal completion containing a String or a throw completion
+            ): either a normal completion containing an *undefined* or a String, or a throw completion
           </ins>
         </h1>
         <dl class="header">
@@ -1862,7 +1862,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
             For any object that is a Module Source Object, returns a normal completion for a String corresponding to the source record type to be used as the strongly branded return value of the @@toStringTag getter on %AbstractModuleSource%.
           </li>
           <li>
-            For any object which is not a Module Source Object, returns a throw completion.
+            For any object which is not a Module Source Object, returns a normal completion containing an *undefined*.
           </li>
         </ul>
       </emu-clause>
@@ -2024,7 +2024,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
           1. Let _sourceNameResult_ be Completion(HostGetModuleSourceName(_O_)).
           1. If _sourceNameResult_ is an abrupt completion, return *undefined*.
           1. Let _name_ be ! _sourceNameResult_.
-          1. Assert: _name_ is a String.
+          1. Assert: _name_ is a String or *undefined*.
           1. Return _name_.
         </emu-alg>
         <p>This property has the attributes { [[Enumerable]]: *false*, [[Configurable]]: *true* }.</p>
