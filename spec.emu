@@ -1165,7 +1165,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
                 <p><ins>It returns either a normal completion containing the Module Source Object corresponding to this source Module Record's source phase (<emu-xref href="#sec-module-source-objects"></emu-xref>), or a throw completion.</ins></p>
                 <p><ins>When called multiple times on the same Module Record, if GetModuleSource() returns a normal completion it must always return a normal completion containing the same object.</ins></p>
                 <p><ins>The returned object should have a [[Prototype]] internal slot whose value is %AbstractModuleSource.prototype%.</ins></p>
-                <p><ins>For Module Records that do not have a source representation, GetModuleSource() must always return a throw completion whose [[Value]] is a *ReferenceError*.</ins></p>
+                <p><ins>For Module Records that do not have a source representation, GetModuleSource() must always return a throw completion whose [[Value]] is a *SyntaxError*.</ins></p>
               </td>
             </tr>
           </table>
@@ -1561,7 +1561,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
             </dd>
           </dl>
           <emu-alg>
-            1. Throw a *ReferenceError* exception.
+            1. Throw a *SyntaxError* exception.
           </emu-alg>
         </emu-clause>
 
