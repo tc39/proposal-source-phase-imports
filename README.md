@@ -10,6 +10,8 @@ Stage: 3
 
 Stage 3 reviewers: Daniel Ehrenberg, Kris Kowal
 
+Upstream PR: https://github.com/tc39/ecma262/pull/3492
+
 ## Motivation
 
 For both JavaScript and WebAssembly, there is a need to be able to more closely
