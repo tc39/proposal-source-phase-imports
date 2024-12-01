@@ -1097,7 +1097,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
                 an Object or ~empty~
               </td>
               <td>
-                The Module Source Object corresponding to this source Module Record's source phase (<emu-xref href="#sec-module-source-objects"></emu-xref>), or ~empty~ if it is not available for this module kind. When set, it must have a [[Prototype]] internal slot whose value is %AbstractModuleSource.prototype%.
+                The Module Source Object corresponding to this source Module Record's source phase (<emu-xref href="#sec-module-source-objects"></emu-xref>), or ~empty~ if it is not available for this module kind. When set, it must have a [[Prototype]] internal slot containing an object whose initial [[Prototype]] is %AbstractModuleSource%.
               </td>
             </tr>
             <tr>
