@@ -1094,10 +1094,10 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
                 [[ModuleSource]]
               </td>
               <td>
-                an Object or ~empty~
+                a module source object or ~empty~
               </td>
               <td>
-                The Module Source Object corresponding to this source Module Record's source phase (<emu-xref href="#sec-module-source-objects"></emu-xref>), or ~empty~ if it is not available for this module kind. When not ~empty~, it must be an object whose initial [[Prototype]] is an object whose initial [[Prototype]] is %AbstractModuleSource%.prototype.
+                The Module Source Object corresponding to this source Module Record's source phase (<emu-xref href="#sec-module-source-objects"></emu-xref>), or ~empty~ if it is not available for this module kind.
               </td>
             </tr>
             <tr>
@@ -2067,8 +2067,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
   <emu-clause id="sec-module-source-objects">
     <h1><ins>Module Source Objects</ins></h1>
     <p>Module Source Objects represent modules in their source import phase, which are not linked, instantiated or executed.</p>
-    <p>A <dfn>Module Source Object</dfn> is an object for which HostGetModuleSourceModuleRecord returns a normal completion.</p>
-    <p>All Module Source Objects should have a prototype of %AbstractModuleSource%.prototype.</p>
+    <p>A <dfn>Module Source Object</dfn> is an object whose initial [[Prototype]] is an object whose initial [[Prototype]] is %AbstractModuleSource%.prototype.</p>
     <p>Hosts may define their own %AbstractModuleSource% subclasses for custom module types.</p>
 
     <emu-clause id="sec-%abstractmodulesource%-constructor">
