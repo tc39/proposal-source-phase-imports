@@ -876,7 +876,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
             1. <ins>If _phase_ is ~source~, then</ins>
               1. <ins>Let _moduleSource_ be _module_.[[ModuleSource]].</ins>
               1. <ins>If _moduleSource_ is ~empty~, then</ins>
-                1. <ins>Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, &laquo; a new *SyntaxError* &raquo;).</ins>
+                1. <ins>Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, &laquo; a newly created *SyntaxError* object &raquo;).</ins>
               1. <ins>Else,</ins>
                 1. <ins>Perform ! Call(_promiseCapability_.[[Resolve]], *undefined*, &laquo; _moduleSource_ &raquo;).</ins>
               1. <ins>Return ~unused~.</ins>
@@ -1170,12 +1170,14 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
             </tr>
             <tr>
               <td>
-                <ins>GetModuleSourceKind()</ins>
+                <ins>GetModuleSourceKind ( ): a String</ins>
               </td>
               <td>
                 <p><ins>Returns a constant string for each concrete module record that exposes a source representation through their [[ModuleSource]] field, to be used as the return value of the %Symbol.toStringTag% getter on %AbstractModuleSource%.</ins></p>
                 <p><ins>For Module Records that do not have a source representation (currently all ECMA-262-defined Module Records), GetModuleSourceKind() is never called.</ins></p>
               </td>
+              <ins><td>
+              </td></ins>
             </tr>
           </table>
         </emu-table>
@@ -1366,7 +1368,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
                 1. <ins>For each ModuleRequest Record _required_ of _module_.[[RequestedModules]], do</ins>
                   1. If _module_.[[LoadedModules]] contains a Record whose [[Specifier]] is _required_<ins>.[[Specifier]]</ins>, then
                     1. Let _record_ be that Record.
-                    1. <ins>If _required_.[[Phase]] is ~source~, let _innerLoadType_ be ~single~; otherwise let _innerLoadType_ be ~recursive-load~.</ins>
+                    1. <ins>If _required_.[[Phase]] is ~source~, let _innerLoadType_ be ~single~; else let _innerLoadType_ be ~recursive-load~.</ins>
                     1. Perform InnerModuleLoading(_state_, _record_.[[Module]], <ins>_innerLoadType_</ins>).
                   1. Else,
                     1. Perform HostLoadImportedModule(_module_, _required_, _state_.[[HostDefined]], _state_).
@@ -1399,7 +1401,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
             <emu-alg>
               1. If _state_.[[IsLoading]] is *false*, return ~unused~.
               1. If _moduleCompletion_ is a normal completion, then
-                1. <ins>If _phase_ is ~source~, let _loadType_ be ~single~; otherwise let _loadType_ be ~recursive-load~.</ins>
+                1. <ins>If _phase_ is ~source~, let _loadType_ be ~single~; else let _loadType_ be ~recursive-load~.</ins>
                 1. Perform InnerModuleLoading(_state_, _moduleCompletion_.[[Value]]<ins>, _loadType_</ins>).
               1. Else,
                 1. Set _state_.[[IsLoading]] to *false*.
@@ -1720,7 +1722,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
               [[ImportName]]
             </td>
             <td>
-              a String <del>or ~namespace-object~</del><ins>, ~namespace-object~ or ~source~</ins>
+              a String <del>or ~namespace-object~</del><ins>, ~namespace-object~, or ~source~</ins>
             </td>
             <td>
               The name under which the desired binding is exported by the module identified by [[ModuleRequest]]. The value ~namespace-object~ indicates that the import request is for the target module's namespace object. <ins>The value ~source~ represents an import at the source phase.</ins>
@@ -1897,12 +1899,12 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
         </emu-alg>
       </emu-clause>
 
-      <emu-clause id="sec-HostGetModuleSourceModuleRecord" type="host-defined abstract operation">
+      <emu-clause id="sec-hostgetmodulesourcemodulerecord" type="host-defined abstract operation">
         <h1>
           <ins>
             HostGetModuleSourceModuleRecord (
               _specifier_: an Object,
-            ): either a Module Record or ~not-a-source~
+            ): a Module Record or ~not-a-source~
           </ins>
         </h1>
         <dl class="header">
@@ -2020,6 +2022,16 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
         BindingIdentifier[~Yield, +Await]
     </emu-grammar>
 
+    <ins><emu-clause id="sec-imports-static-semantics-boundnames" type="sdo">
+      <h1>Static Semantics: BoundNames ( ): a List of Strings</h1>
+      <dl class="header">
+      </dl>
+      <emu-grammar>ImportDeclaration : `import` `source` ImportedBinding FromClause `;`</emu-grammar>
+      <emu-alg>
+        1. Return the BoundNames of |ImportedBinding|.
+      </emu-alg>
+    </emu-clause></ins>
+
     <emu-clause id="sec-static-semantics-importentries" oldids="sec-module-semantics-static-semantics-importentries,sec-imports-static-semantics-importentries" type="syntax-directed operation">
       <h1>Static Semantics: ImportEntries ( ): a List of ImportEntry Records</h1>
       <dl class="header">
@@ -2054,7 +2066,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
       <emu-grammar><ins>ImportDeclaration : `import` `source` ImportedBinding FromClause `;`</ins></emu-grammar>
       <emu-alg>
         1. <ins>Let _module_ be the SV of |FromClause|.</ins>
-        1. <ins>Let _localName_ be the sole element of BoundNames of |ImportedBinding|.</ins>
+        1. <ins>Let _localName_ be the sole element of the BoundNames of |ImportedBinding|.</ins>
         1. <ins>Let _entry_ be the ImportEntry Record { [[ModuleRequest]]: _module_, [[ImportName]]: ~source~, [[LocalName]]: _localName_ }.</ins>
         1. <ins>Return « _entry_ »</ins>.
       </emu-alg>
@@ -2074,13 +2086,14 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
       <h1>The %AbstractModuleSource% Constructor</h1>
       <p>The %AbstractModuleSource% constructor:</p>
       <ul>
+        <li><ins>is <dfn>%AbstractModuleSource%</dfn>.</ins></li>
         <li>along with its corresponding prototype object, provides common properties that are inherited by Module Source constructors and their instances.</li>
         <li>does not have a global name or appear as a property of the global object.</li>
         <li>acts as a common superclass of the constructors of Module Source Objects.</li>
         <li>will throw an error when invoked, because it is an abstract class constructor. The module source constructors do not perform a `super` call to it.</li>
       </ul>
 
-      <emu-clause id="sec-%abstractmodulesource%">
+      <emu-clause id="sec-%abstractmodulesource%" type="built-in function">
         <h1>%AbstractModuleSource% ( )</h1>
         <p>This function performs the following steps when called:</p>
         <emu-alg>
@@ -2120,9 +2133,9 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
         <p>The initial value of %AbstractModuleSource%`.prototype.constructor` is %AbstractModuleSource%.</p>
       </emu-clause>
 
-      <emu-clause id="sec-get-%abstractmodulesource%.prototype.@@tostringtag">
-        <h1>get %AbstractModuleSource%.prototype [ @@toStringTag ]</h1>
-        <p>%AbstractModuleSource%.prototype `[@@toStringTag]` is an accessor property whose set accessor function is *undefined*. Its get accessor function performs the following steps when called:</p>
+      <emu-clause id="sec-get-%abstractmodulesource%.prototype-%symbol.tostringtag%" type="built-in function">
+        <h1>get %AbstractModuleSource%.prototype [ %Symbol.toStringTag% ]</h1>
+        <p>%AbstractModuleSource%`.prototype[%Symbol.toStringTag%]` is an accessor property whose set accessor function is *undefined*. Its get accessor function performs the following steps when called:</p>
         <emu-alg>
           1. Let _O_ be the *this* value.
           1. If _O_ is not an Object, return *undefined*.
