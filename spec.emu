@@ -1145,7 +1145,7 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
                 ResolveExport(_exportName_ [, _resolveSet_])
               </td>
               <td>
-                <p>Return the binding of a name exported by this module. Bindings are represented by a <dfn id="resolvedbinding-record" variants="ResolvedBinding Records">ResolvedBinding Record</dfn>, of the form { [[Module]]: Module Record, [[BindingName]]: String | ~namespace~ }. If the export is a Module Namespace Object without a direct binding in any module, [[BindingName]] will be set to ~namespace~. Return *null* if the name cannot be resolved, or ~ambiguous~ if multiple bindings were found.</p>
+                <p>Return the binding of a name exported by this module. Bindings are represented by a <dfn id="resolvedbinding-record" variants="ResolvedBinding Records">ResolvedBinding Record</dfn>, of the form { [[Module]]: Module Record, [[BindingName]]: String | ~namespace~ <ins>| ~source~</ins> }. If the export is a Module Namespace Object without a direct binding in any module, [[BindingName]] will be set to ~namespace~. <ins>If the export is a Module Source Object without a direct binding in any module, [[BindingName]] will be set to ~source~.</ins> Return *null* if the name cannot be resolved, or ~ambiguous~ if multiple bindings were found.</p>
                 <p>Each time this operation is called with a specific _exportName_, _resolveSet_ pair as arguments it must return the same result.</p>
                 <p>LoadRequestedModules must have completed successfully prior to invoking this method.</p>
               </td>
@@ -1554,6 +1554,65 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
       <emu-clause id="sec-source-text-module-records">
         <h1>Source Text Module Records</h1>
 
+        <emu-clause id="sec-resolveexport" type="concrete method">
+          <h1>
+            ResolveExport (
+              _exportName_: a String,
+              optional _resolveSet_: a List of Records with fields [[Module]] (a Module Record) and [[ExportName]] (a String),
+            ): a ResolvedBinding Record, *null*, or ~ambiguous~
+          </h1>
+          <dl class="header">
+            <dt>for</dt>
+            <dd>a Source Text Module Record _module_</dd>
+          </dl>
+          <emu-alg>
+            1. Assert: _module_.[[Status]] is not ~new~.
+            1. If _resolveSet_ is not present, set _resolveSet_ to a new empty List.
+            1. For each Record { [[Module]], [[ExportName]] } _r_ of _resolveSet_, do
+              1. If _module_ and _r_.[[Module]] are the same Module Record and _exportName_ is _r_.[[ExportName]], then
+                1. Assert: This is a circular import request.
+                1. Return *null*.
+            1. Append the Record { [[Module]]: _module_, [[ExportName]]: _exportName_ } to _resolveSet_.
+            1. For each ExportEntry Record _e_ of _module_.[[LocalExportEntries]], do
+              1. If _e_.[[ExportName]] is _exportName_, then
+                1. Assert: _module_ provides the direct binding for this export.
+                1. Return ResolvedBinding Record { [[Module]]: _module_, [[BindingName]]: _e_.[[LocalName]] }.
+            1. For each ExportEntry Record _e_ of _module_.[[IndirectExportEntries]], do
+              1. If _e_.[[ExportName]] is _exportName_, then
+                1. Assert: _e_.[[ModuleRequest]] is not *null*.
+                1. Let _importedModule_ be GetImportedModule(_module_, _e_.[[ModuleRequest]]).
+                1. If _e_.[[ImportName]] is ~all~, then
+                  1. Assert: _module_ does not provide the direct binding for this export.
+                  1. Return ResolvedBinding Record { [[Module]]: _importedModule_, [[BindingName]]: ~namespace~ }.
+                1. <ins>Else if _e_.[[ImportName]] is ~source~, then</ins>
+                  1. <ins>Assert: _module_ does not provide the direct binding for this export.</ins>
+                  1. <ins>Return ResolvedBinding Record { [[Module]]: _importedModule_, [[BindingName]]: ~source~ }.</ins>
+                1. Else,
+                  1. Assert: _module_ imports a specific binding for this export.
+                  1. Assert: _e_.[[ImportName]] is a String.
+                  1. Return _importedModule_.ResolveExport(_e_.[[ImportName]], _resolveSet_).
+            1. If _exportName_ is *"default"*, then
+              1. Assert: A `default` export was not explicitly defined by this module.
+              1. Return *null*.
+              1. NOTE: A `default` export cannot be provided by an `export * from "mod"` declaration.
+            1. Let _starResolution_ be *null*.
+            1. For each ExportEntry Record _e_ of _module_.[[StarExportEntries]], do
+              1. Assert: _e_.[[ModuleRequest]] is not *null*.
+              1. Let _importedModule_ be GetImportedModule(_module_, _e_.[[ModuleRequest]]).
+              1. Let _resolution_ be _importedModule_.ResolveExport(_exportName_, _resolveSet_).
+              1. If _resolution_ is ~ambiguous~, return ~ambiguous~.
+              1. If _resolution_ is not *null*, then
+                1. Assert: _resolution_ is a ResolvedBinding Record.
+                1. If _starResolution_ is *null*, then
+                  1. Set _starResolution_ to _resolution_.
+                1. Else,
+                  1. Assert: There is more than one `*` export that includes the requested name.
+                  1. If _resolution_.[[Module]] and _starResolution_.[[Module]] are not the same Module Record, return ~ambiguous~.
+                  1. If _resolution_.[[BindingName]] is not _starResolution_.[[BindingName]], return ~ambiguous~.
+            1. Return _starResolution_.
+          </emu-alg>
+        </emu-clause>
+
         <emu-clause id="sec-source-text-module-record-initialize-environment" type="concrete method">
           <h1>InitializeEnvironment ( ): either a normal completion containing ~unused~ or a throw completion</h1>
           <dl class="header">
@@ -1589,6 +1648,11 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
                   1. Let _namespace_ be GetModuleNamespace(_resolution_.[[Module]]).
                   1. Perform ! _env_.CreateImmutableBinding(_in_.[[LocalName]], *true*).
                   1. Perform ! _env_.InitializeBinding(_in_.[[LocalName]], _namespace_).
+                1. <ins>Else if _resolution_.[[BindingName]] is ~source~, then</ins>
+                  1. <ins>Let _moduleSourceObject_ be _resolution_.[[Module]].[[ModuleSource]].</ins>
+                  1. <ins>If _moduleSourceObject_ is ~empty~, throw a *SyntaxError* exception.</ins>
+                  1. <ins>Perform ! _env_.CreateImmutableBinding(_in_.[[LocalName]], *true*).</ins>
+                  1. <ins>Perform ! _env_.InitializeBinding(_in_.[[LocalName]], _moduleSourceObject_).</ins>
                 1. Else,
                   1. Perform _env_.CreateImportBinding(_in_.[[LocalName]], _resolution_.[[Module]], _resolution_.[[BindingName]]).
             1. Let _moduleContext_ be a new ECMAScript code execution context.
@@ -1858,6 +1922,57 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
       </emu-clause>
       <p>The default implementation of HostGetModuleSourceModuleRecord is to return ~not-a-source~.</p>
     </emu-clause>
+  </emu-clause>
+
+  <emu-clause id="sec-parsemodule" type="abstract operation">
+    <h1>
+      ParseModule (
+        _sourceText_: ECMAScript source text,
+        _realm_: a Realm Record,
+        _hostDefined_: anything,
+      ): a Source Text Module Record or a non-empty List of *SyntaxError* objects
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>It creates a Source Text Module Record based upon the result of parsing _sourceText_ as a |Module|.</dd>
+    </dl>
+    <emu-alg>
+      1. Let _body_ be ParseText(_sourceText_, |Module|).
+      1. If _body_ is a List of errors, return _body_.
+      1. Let _requestedModules_ be the ModuleRequests of _body_.
+      1. Let _importEntries_ be the ImportEntries of _body_.
+      1. Let _importedBoundNames_ be ImportedLocalNames(_importEntries_).
+      1. Let _indirectExportEntries_ be a new empty List.
+      1. Let _localExportEntries_ be a new empty List.
+      1. Let _starExportEntries_ be a new empty List.
+      1. Let _exportEntries_ be the ExportEntries of _body_.
+      1. For each ExportEntry Record _ee_ of _exportEntries_, do
+        1. If _ee_.[[ModuleRequest]] is *null*, then
+          1. If _importedBoundNames_ does not contain _ee_.[[LocalName]], then
+            1. Append _ee_ to _localExportEntries_.
+          1. Else,
+            1. NOTE: When exporting a binding or namespace object which was originally imported from another module, the ExportEntry Record is rewritten to match the form it would have if the binding or namespace object had been re-exported directly from the original module rather than imported then exported. This allows conflicts which arise from exporting the same binding or namespace twice under the same name through `export * from` to be ignored rather than being treated as ambiguous in <emu-xref href="#sec-resolveexport">the ResolveExport concrete method of Source Text Module Records</emu-xref>.
+            1. Let _ie_ be the element of _importEntries_ whose [[LocalName]] is _ee_.[[LocalName]].
+            1. If _ie_.[[ImportName]] is ~namespace-object~, then
+              1. NOTE: This is a re-export of an imported module namespace object.
+              1. Append the ExportEntry Record { [[ModuleRequest]]: _ie_.[[ModuleRequest]], [[ImportName]]: ~all~, [[LocalName]]: *null*, [[ExportName]]: _ee_.[[ExportName]] } to _indirectExportEntries_.
+            1. <ins>Else if _ie_.[[ImportName]] is ~source~, then</ins>
+              1. <ins>NOTE: This is a re-export of an imported module source object.</ins>
+              1. <ins>Append the ExportEntry Record { [[ModuleRequest]]: _ie_.[[ModuleRequest]], [[ImportName]]: ~source~, [[LocalName]]: *null*, [[ExportName]]: _ee_.[[ExportName]] } to _indirectExportEntries_.</ins>
+            1. Else,
+              1. NOTE: This is a re-export of a single name.
+              1. Append the ExportEntry Record { [[ModuleRequest]]: _ie_.[[ModuleRequest]], [[ImportName]]: _ie_.[[ImportName]], [[LocalName]]: *null*, [[ExportName]]: _ee_.[[ExportName]] } to _indirectExportEntries_.
+        1. Else if _ee_.[[ImportName]] is ~all-but-default~, then
+          1. Assert: _ee_.[[ExportName]] is *null*.
+          1. Append _ee_ to _starExportEntries_.
+        1. Else,
+          1. Append _ee_ to _indirectExportEntries_.
+      1. Let _async_ be _body_ Contains `await`.
+      1. Return Source Text Module Record { [[Realm]]: _realm_, [[Environment]]: ~empty~, [[Namespace]]: ~empty~, [[CycleRoot]]: ~empty~, [[HasTLA]]: _async_, [[AsyncEvaluationOrder]]: ~unset~, [[TopLevelCapability]]: ~empty~, [[AsyncParentModules]]: « », [[PendingAsyncDependencies]]: ~empty~, [[Status]]: ~new~, [[EvaluationError]]: ~empty~, [[HostDefined]]: _hostDefined_, [[ECMAScriptCode]]: _body_, [[Context]]: ~empty~, [[ImportMeta]]: ~empty~, [[RequestedModules]]: _requestedModules_, [[LoadedModules]]: « », [[ImportEntries]]: _importEntries_, [[LocalExportEntries]]: _localExportEntries_, [[IndirectExportEntries]]: _indirectExportEntries_, [[StarExportEntries]]: _starExportEntries_, [[DFSAncestorIndex]]: ~empty~ }.
+    </emu-alg>
+    <emu-note>
+      <p>An implementation may parse module source text and analyse it for Early Error conditions prior to the evaluation of ParseModule for that module source text. However, the reporting of any errors must be deferred until the point where this specification actually performs ParseModule upon that source text.</p>
+    </emu-note>
   </emu-clause>
 
   <emu-clause id="sec-imports">
