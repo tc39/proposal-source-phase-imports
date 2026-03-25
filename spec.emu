@@ -1176,7 +1176,8 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
                 <p><ins>Returns a constant string for each concrete module record that exposes a source representation through their [[ModuleSource]] field, to be used as the return value of the %Symbol.toStringTag% getter on %AbstractModuleSource%.</ins></p>
                 <p><ins>For Module Records that do not have a source representation (currently all ECMA-262-defined Module Records), GetModuleSourceKind() is never called.</ins></p>
               </td>
-              <ins><td></td></ins>
+              <ins><td>
+              </td></ins>
             </tr>
           </table>
         </emu-table>
@@ -2020,6 +2021,16 @@ contributors: Luca Casonato, Guy Bedford, Nicolò Ribaudo
       ImportedBinding :
         BindingIdentifier[~Yield, +Await]
     </emu-grammar>
+
+    <ins><emu-clause id="sec-imports-static-semantics-boundnames" type="sdo">
+      <h1>Static Semantics: BoundNames ( ): a List of Strings</h1>
+      <dl class="header">
+      </dl>
+      <emu-grammar>ImportDeclaration : `import` `source` ImportedBinding FromClause `;`</emu-grammar>
+      <emu-alg>
+        1. Return the BoundNames of |ImportedBinding|.
+      </emu-alg>
+    </emu-clause></ins>
 
     <emu-clause id="sec-static-semantics-importentries" oldids="sec-module-semantics-static-semantics-importentries,sec-imports-static-semantics-importentries" type="syntax-directed operation">
       <h1>Static Semantics: ImportEntries ( ): a List of ImportEntry Records</h1>
